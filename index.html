@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jaden의 서재</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+/* VOICE: quiet museum archive — calm, precise, tactile
+   IDEA: a curved archive shelf; one book turns to face you, the rest show spines
+   PICTURE: CSS-3D arc of real book boxes (cover, spine, page edge) behind giant vertical type
+   COLOUR and TYPE: paper ground, ink text, one cobalt accent; Cormorant/Noto Serif KR titles, Noto Sans KR labels
+   LAYOUT: header, filter row, shelf stage, centered title with arrows, year timeline, footer */
+:root{color-scheme:light dark;
+--bg:light-dark(#FCFBF9,#15171C);--ink:light-dark(#1A1A1A,#ECE6DA);--mute:light-dark(#6B675F,#9C978D);
+--ghost:light-dark(#E6E4E0,#23262D);--acc:light-dark(#2436B0,#8E9CFF);--line:light-dark(#DEDAD2,#30333A);
+--card:light-dark(#FFFFFF,#1C1F25);--onacc:light-dark(#fff,#10121A)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 'Noto Sans KR',system-ui,sans-serif;overflow-x:clip}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
+.serif{font-family:'Cormorant Garamond','Noto Serif KR',serif}
+.app{min-height:100dvh;display:grid;grid-template-rows:auto auto minmax(560px,1fr) auto}
+.top{display:flex;flex-wrap:wrap;gap:10px 24px;justify-content:space-between;align-items:center;padding:18px max(4vw,16px) 6px;font-size:12px;letter-spacing:.14em}
+.brand{color:var(--acc);font-weight:700;display:flex;align-items:center;gap:12px}
+.brand i{display:inline-block;width:56px;height:1px;background:currentColor}
+.nav{display:flex;flex-wrap:wrap;gap:2px}
+.nav button{background:none;border:0;padding:12px 10px;min-height:44px;letter-spacing:.14em;font-size:12px;color:var(--ink)}
+.nav button:hover{color:var(--acc)}
+.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;padding:4px 16px 0}
+.chips button{border:1px solid var(--line);background:none;border-radius:99px;padding:7px 14px;min-height:36px;font-size:13px;color:var(--mute)}
+.chips button[aria-pressed=true]{border-color:var(--acc);color:var(--acc)}
+.main{position:relative;display:flex;flex-direction:column}
+.main>.stage,.main>.info,.main>.tl{transition:opacity .45s ease}
+.main.away>.stage,.main.away>.info,.main.away>.tl{opacity:0;pointer-events:none}
+.stage{position:relative;flex:1;min-height:360px;perspective:1500px;perspective-origin:50% 42%;overflow:hidden;cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.stage:focus-visible{outline:1px dashed var(--acc);outline-offset:-10px}
+.stage.drag{cursor:grabbing}.stage.oncenter{cursor:none}
+.giant{position:absolute;top:46%;transform:translateY(-50%);white-space:nowrap;writing-mode:vertical-rl;text-orientation:upright;font:900 clamp(64px,11vw,176px)/1 'Noto Serif KR',serif;color:var(--ghost);letter-spacing:-.04em;pointer-events:none}
+.giant.l{left:3.5vw}.giant.r{right:3.5vw}
+.floor{position:absolute;left:8%;right:8%;height:56px;margin-top:-22px;background:radial-gradient(closest-side,rgba(0,0,0,.2),transparent);pointer-events:none}
+.ring{position:absolute;inset:0;transform-style:preserve-3d}
+.bk{position:absolute;left:50%;width:0;height:0;transform-style:preserve-3d;will-change:transform}
+.box{position:absolute;left:calc(var(--w)/-2);top:calc(var(--h)*-1);width:var(--w);height:var(--h);transform-style:preserve-3d}
+.fc{position:absolute;backface-visibility:hidden;-webkit-backface-visibility:hidden;opacity:var(--o,1)}
+.front,.back{inset:0}
+.front{transform:translateZ(calc(var(--D)/2))}
+.back{transform:rotateY(180deg) translateZ(calc(var(--D)/2));background:var(--c);filter:brightness(.7)}
+.spine,.edge{top:0;height:100%;width:var(--D);left:calc((var(--w) - var(--D))/2)}
+.spine{transform:rotateY(-90deg) translateZ(calc(var(--w)/2))}
+.edge{transform:rotateY(90deg) translateZ(calc(var(--w)/2));background:repeating-linear-gradient(90deg,#F1EADA 0 1px,#D8CEB7 1px 2px)}
+.topf{left:0;width:100%;height:var(--D);top:calc((var(--h) - var(--D))/2);transform:rotateX(90deg) translateZ(calc(var(--h)/2));background:repeating-linear-gradient(0deg,#F1EADA 0 1px,#D8CEB7 1px 2px)}
+.bk.ghost .fc{visibility:hidden}
+.ring.deal .fc{animation:fadeIn .7s ease backwards;animation-delay:var(--dl,0ms)}
+@keyframes fadeIn{from{opacity:0}}
+.cv{position:absolute;inset:0;background:var(--c);color:var(--k);overflow:hidden;font-size:calc(var(--w,200px)/13);font-family:'Cormorant Garamond','Noto Serif KR',serif}
+.cv::after,.sp::after{content:'';position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;opacity:.55;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .45 0 0 0 0 .4 0 0 0 .35 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.cv::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,rgba(0,0,0,.28) 0,rgba(255,255,255,.12) 2.5%,transparent 7%,transparent 90%,rgba(0,0,0,.14)),radial-gradient(120% 90% at 50% 40%,transparent 60%,rgba(60,40,20,.25))}
+.cv img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cv-in{position:absolute;inset:.75em .7em;border:1px solid color-mix(in srgb,var(--k) 45%,transparent);display:flex;flex-direction:column;align-items:center;text-align:center;padding:.8em .6em .7em}
+.cv-in small{font:500 .4em 'Noto Sans KR',sans-serif;letter-spacing:.22em;opacity:.85}
+.cv-m{flex:1;width:74%;display:grid;place-items:center;padding:.4em 0}
+.cv-m svg{width:100%;height:100%;max-height:7em}
+.cv-in b{font-weight:700;font-size:1.3em;line-height:1.12;word-break:keep-all;text-wrap:balance}
+.cv-in b.s{font-size:1em}
+.cv-in i{font-style:normal;font:500 .38em 'Noto Sans KR',sans-serif;letter-spacing:.24em;margin-top:.7em;opacity:.75}
+.sp{position:absolute;inset:0;background:var(--c);color:var(--k);display:flex;flex-direction:column;align-items:center;padding:12% 0 9%;overflow:hidden;font-family:'Noto Serif KR',serif}
+.sp::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,rgba(0,0,0,.3),rgba(255,255,255,.14) 35%,rgba(0,0,0,.04) 62%,rgba(0,0,0,.32)),linear-gradient(var(--k),var(--k)) 0 6%/100% 1px no-repeat,linear-gradient(var(--k),var(--k)) 0 94%/100% 1px no-repeat}
+.sp-m{width:calc(var(--D)*.34);aspect-ratio:1;border-radius:50%;background:var(--k);opacity:.8;margin-bottom:calc(var(--D)*.35);flex:none}
+.sp b{writing-mode:vertical-rl;font-size:calc(var(--D)*.36);font-weight:700;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;letter-spacing:.06em}
+.sp small{writing-mode:vertical-rl;font:500 calc(var(--D)*.22) 'Noto Sans KR',sans-serif;opacity:.8;margin-top:.7em;max-height:28%;overflow:hidden;white-space:nowrap;flex:none}
+.empty{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;text-align:center}
+.empty p{font:700 22px 'Noto Serif KR',serif;color:var(--acc);margin:0}
+.info{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:12px;max-width:680px;width:100%;margin:-6px auto 0;padding:0 16px;text-align:center}
+.arr{width:44px;height:44px;border-radius:50%;border:0;background:none;color:var(--acc);font-size:22px;line-height:1}
+.arr:hover{background:color-mix(in srgb,var(--acc) 10%,transparent)}
+.info h1{margin:0;font-weight:700;font-size:clamp(30px,4.2vw,48px);line-height:1.05;color:var(--acc);text-wrap:balance;word-break:keep-all}
+.info .sub{margin:8px 0 0;font-size:12px;letter-spacing:.2em;color:var(--mute)}
+.info .meta{margin:10px auto 0;font-size:13px;letter-spacing:.12em;display:inline-block;border-top:1px solid var(--line);padding-top:8px}
+.tl{position:relative;height:56px;margin:18px max(4vw,16px) 8px}
+.tl::before{content:'';position:absolute;left:0;right:0;top:12px;height:1px;background:var(--acc);opacity:.45}
+.tk{position:absolute;top:6px;width:44px;height:44px;margin-left:-22px;border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;color:var(--mute);font-size:11px;letter-spacing:.06em}
+.tk::before{content:'';width:1px;height:12px;background:var(--acc);opacity:.6;margin-bottom:6px}
+.tk:hover{color:var(--acc)}
+.dot{position:absolute;top:7px;width:11px;height:11px;margin-left:-5.5px;border-radius:50%;background:var(--acc);pointer-events:none}
+.foot{display:flex;flex-wrap:wrap;gap:6px 20px;justify-content:space-between;padding:14px max(4vw,16px) 18px;font-size:11px;letter-spacing:.14em;color:var(--mute)}
+#cur{position:fixed;left:0;top:0;width:96px;height:96px;margin:-48px 0 0 -48px;border-radius:50%;background:var(--acc);color:var(--onacc);display:grid;place-content:center;text-align:center;font:700 12px/1.3 'Noto Sans KR',sans-serif;letter-spacing:.16em;pointer-events:none;z-index:70;transform:scale(0)}
+#cur span{display:block;font-weight:500;font-size:10px;opacity:.8}
+.fly{position:fixed;z-index:95;transform-origin:0 0;pointer-events:none;box-shadow:0 30px 60px -24px rgba(0,0,0,.5)}
+.detail{position:absolute;inset:0;overflow:auto;display:none;z-index:5}
+.detail.open{display:block}
+.dgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(24px,5vw,72px);align-items:center;max-width:1180px;min-height:100%;margin:0 auto;padding:28px max(5vw,16px) 40px}
+.back-r{position:sticky;top:0;float:left;margin:12px 0 0 max(3vw,12px);width:48px;height:48px;border-radius:50%;border:0;background:var(--ink);color:var(--bg);font-size:20px;z-index:2}
+.dwrap{perspective:1200px;display:grid;place-items:center}
+.dcover{position:relative;width:min(340px,36vw);transition:transform .35s ease-out;box-shadow:-5px 0 0 color-mix(in srgb,#000 30%,transparent),0 40px 70px -28px rgba(0,0,0,.55)}
+.dt>*{margin:0}
+.detail.entering .dt>*{animation:up .65s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:calc(var(--n,0)*55ms + 320ms)}
+@keyframes up{from{opacity:0;transform:translateY(16px)}}
+.dt{display:grid;gap:16px}
+.lbl{font-size:12px;letter-spacing:.2em;color:var(--mute)}
+.dtitle{font-size:clamp(36px,5vw,52px);line-height:1.05;color:var(--acc);font-weight:700;word-break:keep-all;text-wrap:balance}
+.dmeta{font-size:13px;letter-spacing:.14em;border-bottom:1px solid var(--line);padding-bottom:12px}
+input,select,textarea{font:16px/1.5 'Noto Sans KR',sans-serif;color:var(--ink);background:transparent;border:0;border-bottom:1px solid var(--line);padding:8px 2px;width:100%;border-radius:0}
+textarea{resize:vertical;border:1px solid var(--line);padding:10px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--acc)}
+.dline{font:600 20px/1.4 'Cormorant Garamond','Noto Serif KR',serif}
+.row{display:grid;grid-template-columns:4.5em minmax(0,1fr);align-items:center;gap:10px}
+.k{font-size:12px;letter-spacing:.16em;color:var(--mute)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1px solid var(--line);background:none;padding:8px 12px;min-height:40px;font-size:13px}
+.seg button[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:var(--onacc)}
+.stars{display:flex}
+.stars button{border:0;background:none;width:40px;height:40px;font-size:22px;color:var(--line);padding:0}
+.stars button.on{color:var(--acc)}
+.prog input{padding:0;border:0;accent-color:var(--acc);height:28px}
+.pv{font-size:13px;color:var(--mute);white-space:nowrap}
+blockquote{position:relative;margin:0 0 10px;padding:4px 40px 4px 14px;border-left:2px solid var(--acc);font:600 18px/1.45 'Cormorant Garamond','Noto Serif KR',serif}
+blockquote cite{display:block;font:400 12px 'Noto Sans KR',sans-serif;color:var(--mute);font-style:normal;margin-top:2px}
+blockquote button{position:absolute;right:0;top:0;width:36px;height:36px;border:0;background:none;color:var(--mute);font-size:18px}
+.emptyq{color:var(--mute);font-size:14px;margin:4px 0 10px}
+.qadd{display:grid;grid-template-columns:minmax(0,1fr) 5em auto;gap:8px;align-items:end}
+.btn{font:500 13px 'Noto Sans KR',sans-serif;letter-spacing:.1em;border:1px solid var(--acc);color:var(--acc);background:transparent;padding:10px 18px;min-height:44px}
+.btn:hover{background:color-mix(in srgb,var(--acc) 8%,transparent)}
+.btn.solid{background:var(--acc);color:var(--onacc)}
+.btn.quiet{border-color:var(--line);color:var(--mute)}
+.dact{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding-top:6px}
+.confirm{font-size:14px;display:flex;gap:6px;align-items:center}
+.confirm button{border:1px solid var(--line);background:none;padding:8px 12px;min-height:40px}
+.confirm button:first-of-type{border-color:#B0362B;color:#B0362B}
+.sheet{position:fixed;inset:0;display:none;place-items:center;background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:80;padding:16px}
+.sheet.on{display:grid}
+.card{position:relative;background:var(--card);border:1px solid var(--line);width:min(620px,100%);max-height:90dvh;overflow:auto;padding:28px;box-shadow:0 30px 80px -30px rgba(0,0,0,.4)}
+.card h2{margin:0 0 16px;font:700 30px/1.1 'Cormorant Garamond','Noto Serif KR',serif;color:var(--acc)}
+.x{position:absolute;right:10px;top:10px;width:44px;height:44px;border:0;background:none;font-size:22px;color:var(--mute)}
+.form{display:grid;grid-template-columns:minmax(0,1fr) 140px;gap:20px}
+.fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 14px}
+.fields label{display:grid;gap:2px;font-size:12px;color:var(--mute);letter-spacing:.08em}
+.fields .w{grid-column:1/-1}
+.sw{display:flex;flex-wrap:wrap;gap:6px}
+.sw input{position:absolute;opacity:0;width:1px;height:1px}
+.sw span{display:block;width:32px;height:32px;border:2px solid transparent;cursor:pointer}
+.sw input:checked+span{outline:2px solid var(--acc);outline-offset:2px}
+.sw input:focus-visible+span{outline:2px dashed var(--acc);outline-offset:2px}
+.mo span{background:var(--card);border:1px solid var(--line);color:var(--ink);padding:4px}
+.mo svg{width:100%;height:100%}
+.prev{position:relative;width:140px;aspect-ratio:.66;--w:140px;box-shadow:0 20px 40px -20px rgba(0,0,0,.5);align-self:start}
+.list{display:grid;margin-top:12px}
+.li{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:center;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:10px 4px;min-height:52px}
+.li:hover{background:color-mix(in srgb,var(--acc) 6%,transparent)}
+.li i{width:28px;height:40px;background:var(--c)}
+.li b{display:block;font-weight:500}.li small{color:var(--mute);font-size:13px}
+.li em{font-style:normal;font-size:12px;color:var(--acc);white-space:nowrap}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:12px 20px;font-size:14px;opacity:0;transition:.3s;z-index:90;pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+.sp .rb{position:absolute;bottom:0;left:33%;width:34%;height:8%;background:#C23B2E;clip-path:polygon(0 0,100% 0,100% 100%,50% 70%,0 100%);z-index:2}
+.drop{display:grid;gap:4px;text-align:left;width:100%;border:1px dashed var(--acc);background:color-mix(in srgb,var(--acc) 4%,transparent);padding:16px 18px;color:var(--acc)}
+.drop b{font-weight:700;font-size:15px}.drop span{font-size:13px;color:var(--mute)}
+.drop.over{background:color-mix(in srgb,var(--acc) 14%,transparent)}
+.fbox{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.fmeta{font-size:13px;color:var(--mute);overflow-wrap:anywhere}
+.lnk{border:0;background:none;color:var(--acc);text-decoration:underline;text-underline-offset:3px;padding:8px 4px;min-height:40px;font-size:13px}
+.reader{--wall:light-dark(#FCFBF9,#191B20);--table:light-dark(#C9A47D,#3B2C21);--table2:light-dark(#A9805A,#2A1F17);--sun:light-dark(rgba(255,233,185,.42),rgba(255,186,110,.09));
+ position:fixed;inset:0;z-index:85;display:grid;grid-template-rows:auto minmax(0,1fr) auto;opacity:0;transition:opacity .45s ease;color:var(--ink);
+ background:linear-gradient(112deg,transparent 0 16%,var(--sun) 16% 25%,transparent 25% 29%,var(--sun) 29% 40%,transparent 40%) 0 0/100% 74% no-repeat,
+ repeating-linear-gradient(90deg,rgba(0,0,0,.035) 0 2px,transparent 2px 11px) 0 100%/100% 26% no-repeat,
+ linear-gradient(var(--table),var(--table2)) 0 100%/100% 26% no-repeat,var(--wall)}
+.reader.on{opacity:1}
+.rbar{display:flex;align-items:center;gap:16px;padding:12px max(4vw,16px)}
+.rtitle{display:grid}.rtitle b{font:700 22px/1.15 'Cormorant Garamond','Noto Serif KR',serif;color:var(--acc)}.rtitle small{font-size:12px;letter-spacing:.14em;color:var(--mute)}
+.rpg{margin-left:auto;font-size:13px;letter-spacing:.1em;white-space:nowrap}
+.rbar .x{position:static}
+.rstage{position:relative;display:grid;place-items:center;padding:10px 16px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.spread{position:relative;display:flex;perspective:2400px;--bc:#333;cursor:pointer}
+.spread::before{content:'';position:absolute;top:-7px;bottom:-7px;left:calc(var(--pw) - 4px);right:-8px;background:var(--bc);border-radius:3px 5px 5px 3px;box-shadow:0 46px 60px -34px rgba(40,25,10,.6),0 14px 24px -14px rgba(0,0,0,.3);transition:left 1s cubic-bezier(.55,.05,.25,1)}
+.spread.opened::before{left:-8px;border-radius:5px}.spread.single::before{left:-4px}
+.slot{position:relative;width:var(--pw);height:100%;flex:none}
+.slot.R{box-shadow:1px 0 0 #EEE7D8,3px 1px 0 #D8CEB9,5px 1px 0 #EBE3D2}.slot.L{box-shadow:-1px 0 0 #EEE7D8,-3px 1px 0 #D8CEB9,-5px 1px 0 #EBE3D2}
+.spread.single .slot.L{display:none}.spread:not(.opened) .slot.L{visibility:hidden}
+.pg{position:absolute;inset:0;background:#FBF8F1;color:#2A2723;overflow:hidden}
+.pg::after{content:'';position:absolute;inset:0;pointer-events:none}
+.slot.R .pg::after,.leaf.r .lf-f .pg::after,.leaf.l .lf-b .pg::after{background:linear-gradient(90deg,rgba(0,0,0,.17),rgba(0,0,0,.04) 6%,transparent 14%)}
+.slot.L .pg::after,.leaf.r .lf-b .pg::after,.leaf.l .lf-f .pg::after{background:linear-gradient(270deg,rgba(0,0,0,.17),rgba(0,0,0,.04) 6%,transparent 14%)}
+.spread.single .pg::after{background:linear-gradient(90deg,rgba(0,0,0,.1),transparent 6%)!important}
+.pg.cvpg{background:none}.pg.cvpg::after{display:none}
+.pg.pdf{background:#fff}.pg.pdf canvas{position:absolute;inset:0;width:100%;height:100%}
+.pg-t{padding:calc(var(--ph)*.08) calc(var(--pw)*.1) calc(var(--ph)*.09);font:400 var(--fs)/1.85 'Noto Serif KR',serif;text-align:justify;word-break:keep-all;overflow-wrap:anywhere}
+.pg-t p{margin:0;text-indent:1em}.pg-t p.c{text-indent:0}
+.pg-t h3{font-size:1.12em;margin:.4em 0 .8em;line-height:1.45;text-align:left;color:#1F2C8F}
+.pg-t .pt{font:700 calc(var(--fs)*2)/1.15 'Cormorant Garamond','Noto Serif KR',serif;margin:2.2em 0 .4em;text-align:center;color:#1F2C8F;text-wrap:balance}
+.pg-t .pa{text-align:center;text-indent:0;color:#857D71;margin-bottom:3em;font-size:.82em;letter-spacing:.2em}
+.pno{position:absolute;bottom:calc(var(--ph)*.035);left:0;right:0;text-align:center;font:500 11px 'Noto Sans KR',sans-serif;color:#9A9285;letter-spacing:.1em;text-indent:0}
+.pg.pdf .pno{display:none}
+.pg.inside{background:#F2ECDF}
+.exlib{position:absolute;inset:20% 18%;border:1px solid #CDC2AC;display:grid;place-content:center;text-align:center;gap:8px;color:#7A6F5E;padding:10px}
+.exlib small{letter-spacing:.3em;font-size:11px}.exlib b{font:700 30px 'Cormorant Garamond',serif;color:#1F2C8F;letter-spacing:.2em}.exlib i{font-style:normal;font-size:13px;word-break:keep-all}
+.leaf{position:absolute;top:0;width:var(--pw);height:100%;transform-style:preserve-3d;z-index:3}
+.leaf.r{left:var(--pw);transform-origin:0 50%}.leaf.l{left:0;transform-origin:100% 50%}.spread.single .leaf.r{left:0}
+.lf{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}.lf-b{transform:rotateY(180deg)}
+.rmsg{position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);margin:0;text-align:center;font-size:15px;color:var(--mute);pointer-events:none}
+.rnav{display:flex;align-items:center;gap:10px;justify-self:center;width:min(560px,calc(100% - 32px));margin:0 0 18px;padding:4px 8px;background:color-mix(in srgb,var(--card) 90%,transparent);border-radius:99px;box-shadow:0 10px 26px -14px rgba(0,0,0,.4)}
+.rnav input{flex:1;accent-color:var(--acc);border:0;padding:0;height:28px}
+.reader .meas{inset:auto;left:-10000px;top:0;width:var(--pw);height:var(--ph);visibility:hidden}
+@media(max-width:760px){
+ .dgrid{grid-template-columns:minmax(0,1fr);align-items:start;padding-top:8px}
+ .dwrap{order:-1}.dcover{width:min(230px,56vw)}
+ .giant{font-size:clamp(56px,16vw,90px);top:30%}
+ .form{grid-template-columns:minmax(0,1fr)}.prev{display:none}
+}
+@media(max-width:520px){.tk:nth-child(even) span{display:none}.brand i{width:28px}.fields{grid-template-columns:minmax(0,1fr)}.qadd{grid-template-columns:minmax(0,1fr) 4.5em}.qadd .btn{grid-column:1/-1}.card{padding:22px 18px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">JADEN <i></i> 개인 서재</div>
+    <nav class="nav" aria-label="메뉴">
+      <button data-sheet="index">목록</button>
+      <button data-sheet="add">책 추가</button>
+      <button data-sheet="backup">백업</button>
+    </nav>
+  </header>
+  <div class="chips" id="chips" role="group" aria-label="상태로 거르기"></div>
+  <main class="main" id="main">
+    <div class="stage" id="stage" tabindex="0" role="region" aria-roledescription="carousel" aria-label="서가. 좌우 화살표로 넘기고 Enter로 엽니다">
+      <div class="giant l" aria-hidden="true">책의</div>
+      <div class="giant r" aria-hidden="true">기억</div>
+      <div class="floor" id="floor"></div>
+      <div class="ring" id="ring"></div>
+      <div class="empty" id="empty" hidden><p>첫 번째 책을 꽂아 주세요.</p><button class="btn" data-sheet="add">책 추가</button></div>
+    </div>
+    <div class="info">
+      <button class="arr" id="prev" aria-label="이전 책">←</button>
+      <div id="info" aria-live="polite"><h1 class="serif" id="iT"></h1><p class="sub" id="iS"></p><p class="meta" id="iM"></p></div>
+      <button class="arr" id="next" aria-label="다음 책">→</button>
+    </div>
+    <div class="tl" id="tl"></div>
+    <section class="detail" id="detail" aria-label="책 상세">
+      <button class="back-r" data-act="back" aria-label="서가로 돌아가기">←</button>
+      <div class="dgrid">
+        <div class="dt" id="dt"></div>
+        <div class="dwrap" id="dwrap"><div class="dcover" id="dcover"></div></div>
+      </div>
+    </section>
+  </main>
+  <footer class="foot"><span>© JADEN. ALL RIGHTS RESERVED.</span><span id="count"></span></footer>
+</div>
+<div id="cur" aria-hidden="true">열기<span>OPEN</span></div>
+
+<div class="sheet" id="s-add" role="dialog" aria-modal="true" aria-labelledby="h-add"><div class="card">
+  <button class="x" data-close aria-label="닫기">×</button><h2 id="h-add">책 꽂기</h2>
+  <form class="form" id="addf">
+    <div class="fields">
+      <label class="w">제목<input name="t" required maxlength="60"></label>
+      <label>저자<input name="a" maxlength="40"></label>
+      <label>장르<input name="g" maxlength="20" placeholder="소설"></label>
+      <label>출간 연도<input name="py" inputmode="numeric" maxlength="4"></label>
+      <label>쪽수<input name="p" inputmode="numeric" maxlength="5" placeholder="300"></label>
+      <label>서가에 꽂을 해<input name="ry" inputmode="numeric" maxlength="4"></label>
+      <label>상태<select name="s" id="sSel"></select></label>
+      <div class="w"><span class="k">표지 색</span><div class="sw" id="swPal"></div></div>
+      <div class="w"><span class="k">표지 그림</span><div class="sw mo" id="swMot"></div></div>
+      <label class="w">표지 사진 (선택)<input type="file" name="img" accept="image/*"></label>
+      <div class="w"><button class="btn solid">서가에 꽂기</button></div>
+    </div>
+    <div class="prev" id="prev2"></div>
+  </form>
+</div></div>
+<div class="sheet" id="s-index" role="dialog" aria-modal="true" aria-labelledby="h-idx"><div class="card">
+  <button class="x" data-close aria-label="닫기">×</button><h2 id="h-idx">전체 목록</h2>
+  <input id="q" type="search" placeholder="제목이나 저자로 찾기" aria-label="검색">
+  <div class="list" id="list"></div>
+</div></div>
+<div class="sheet" id="s-backup" role="dialog" aria-modal="true" aria-labelledby="h-bk"><div class="card">
+  <button class="x" data-close aria-label="닫기">×</button><h2 id="h-bk">백업</h2>
+  <p class="k">서재 데이터는 이 브라우저에만 저장돼요. 아래 내용을 복사해 두었다가 다른 곳에서 붙여 넣으면 옮길 수 있어요. 본문 파일은 백업에 들어가지 않으니 원본 파일은 따로 보관해 주세요.</p>
+  <textarea id="bx" rows="6" readonly aria-label="현재 데이터"></textarea>
+  <p><button class="btn" id="copyb">복사하기</button></p>
+  <textarea id="bi" rows="4" placeholder="백업해 둔 내용을 붙여 넣으세요" aria-label="가져올 데이터"></textarea>
+  <p><button class="btn quiet" id="impb">가져오기</button></p>
+</div></div>
+<div class="reader" id="reader" hidden role="dialog" aria-modal="true" aria-label="본문 읽기">
+  <div class="rbar"><div class="rtitle"><b id="rT"></b><small id="rA"></small></div><span class="rpg" id="rP"></span><button class="x" id="rX" aria-label="닫기">×</button></div>
+  <div class="rstage" id="rstage"><div class="spread" id="spread"><div class="slot L" id="sL"></div><div class="slot R" id="sR"></div></div><p class="rmsg" id="rmsg" aria-live="polite"></p></div>
+  <div class="rnav"><button class="arr" id="rPrev" aria-label="이전 쪽">←</button><input type="range" id="rRange" min="1" max="1" value="1" aria-label="쪽 이동"><button class="arr" id="rNext" aria-label="다음 쪽">→</button></div>
+  <div class="pg pg-t meas" id="meas" aria-hidden="true"></div>
+</div>
+<input type="file" id="fileIn" accept=".pdf,.epub,.txt,.md,.docx" hidden>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+{
+const KEY='jaden-library-v1';
+const PAL=[['#7B2A23','#F1E4CF'],['#24359E','#EDE7DA'],['#2F4A3A','#E8DFC6'],['#B8862F','#1E1B16'],['#1E2230','#E6DCC6'],['#E4D9C1','#2A2622'],['#2F6E73','#F0E7D4'],['#A85A5F','#F5EAD8'],['#5B6470','#EFE7D6'],['#151515','#D9C9A3']];
+const MOT={
+ sun:'<circle cx="50" cy="50" r="20" fill="currentColor"/><path d="M14 76h72M22 84h56M32 92h36"/>',
+ door:'<path d="M26 94V44a24 24 0 0 1 48 0v50z" fill="currentColor"/><path d="M35 94V48a15 15 0 0 1 30 0v46M44 94V52a6 6 0 0 1 12 0v42" style="stroke:var(--c)"/>',
+ wave:'<path d="M8 38q10.5-12 21 0t21 0 21 0 21 0M8 56q10.5-12 21 0t21 0 21 0 21 0M8 74q10.5-12 21 0t21 0 21 0 21 0"/>',
+ peak:'<path d="M6 88 38 34l14 22 10-14 32 46z" fill="currentColor"/><circle cx="74" cy="22" r="7"/>',
+ moon:'<path d="M60 16a34 34 0 1 0 22 56A27 27 0 1 1 60 16z" fill="currentColor"/>',
+ tree:'<circle cx="50" cy="40" r="25" fill="currentColor"/><path d="M50 62v30M36 92h28"/>',
+ star:'<path d="M50 14l5 15h16l-13 9 5 16-13-10-13 10 5-16-13-9h16z" fill="currentColor"/><circle cx="22" cy="70" r="2" fill="currentColor"/><circle cx="78" cy="62" r="2.5" fill="currentColor"/><circle cx="64" cy="86" r="1.6" fill="currentColor"/>',
+ grid:'<path d="M20 20h60v60H20zM20 40h60M20 60h60M40 20v60M60 20v60"/><circle cx="50" cy="50" r="9" fill="currentColor"/>'};
+const MK=Object.keys(MOT);
+const ST={reading:'읽는 중',done:'완독',want:'읽고 싶은',drop:'그만둠'};
+const SEED=[
+['데미안','헤르만 헤세',1919,'소설',248,2018,'done',5,0,'moon','자기 안의 목소리를 찾아가는 성장의 기록'],
+['어린 왕자','앙투안 드 생텍쥐페리',1943,'소설',136,2018,'done',4,1,'star','어른이 된 뒤에 다시 읽어야 보이는 이야기'],
+['노인과 바다','어니스트 헤밍웨이',1952,'소설',160,2019,'done',4,6,'wave','지는 싸움에서도 지키는 존엄'],
+['1984','조지 오웰',1949,'소설',448,2019,'done',5,4,'grid','감시와 언어 통제에 대한 오래된 경고'],
+['사피엔스','유발 하라리',2011,'인문',636,2020,'done',4,3,'sun','허구를 믿으며 협력해 온 인류의 역사'],
+['아몬드','손원평',2017,'소설',264,2020,'done',4,7,'tree','감정을 느끼지 못하는 소년의 성장'],
+['코스모스','칼 세이건',1980,'과학',720,2021,'done',5,9,'star','우주를 통해 인간을 다시 보는 책'],
+['소년이 온다','한강',2014,'소설',216,2021,'done',5,5,'moon','1980년 오월을 견딘 사람들의 이야기'],
+['총, 균, 쇠','재레드 다이아몬드',1997,'인문',752,2022,'drop',3,0,'peak','문명 격차를 지리와 환경으로 설명하는 시도'],
+['불편한 편의점','김호연',2021,'소설',268,2022,'done',3,2,'door','동네 편의점에서 일어나는 작은 회복'],
+['이방인','알베르 카뮈',1942,'소설',168,2023,'done',4,5,'sun','세상의 규칙과 어긋난 한 남자'],
+['물고기는 존재하지 않는다','룰루 밀러',2020,'논픽션',300,2023,'done',5,6,'wave','질서를 찾으려던 과학자와 그 질서의 붕괴'],
+['작별하지 않는다','한강',2021,'소설',332,2023,'done',5,8,'peak','기억과 애도를 건너오는 겨울의 이야기'],
+['더 박스','마크 레빈슨',2006,'경제',576,2024,'done',5,1,'grid','컨테이너 하나가 바꾼 세계 무역'],
+['위대한 개츠비','F. 스콧 피츠제럴드',1925,'소설',256,2024,'done',4,3,'door','닿을 수 없는 꿈을 좇은 여름'],
+['프로젝트 헤일메리','앤디 위어',2021,'SF',696,2024,'done',5,4,'star','홀로 깨어난 과학자의 우주 구조 작전'],
+['지구 끝의 온실','김초엽',2021,'SF',392,2025,'done',4,2,'tree','멸망 이후 식물로 이어진 사람들'],
+['이기적 유전자','리처드 도킨스',1976,'과학',632,2025,'done',4,9,'grid','유전자의 관점에서 다시 본 생명'],
+['클라라와 태양','가즈오 이시구로',2021,'소설',432,2026,'reading',0,7,'sun','인공지능 친구의 눈으로 본 사랑'],
+['백년의 고독','가브리엘 가르시아 마르케스',1967,'소설',568,2026,'want',0,0,'moon','한 가문 일곱 세대의 마술 같은 연대기']];
+const mk=(a,i)=>({id:'s'+i,t:a[0],a:a[1],py:a[2],g:a[3],p:a[4],ry:a[5],s:a[6],r:a[7],pal:a[8],m:a[9],line:a[10],note:'',cur:a[6]==='done'?a[4]:a[6]==='reading'?Math.round(a[4]*.42):0,q:[],img:''});
+const load=()=>{try{const v=JSON.parse(localStorage.getItem(KEY));return Array.isArray(v)?v:null}catch(e){return null}};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(books))}catch(e){}};
+let books=load()||SEED.map(mk);
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hash=s=>{let h=7;for(const ch of s)h=(h*31+ch.charCodeAt(0))|0;return Math.abs(h)};
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fine=matchMedia('(pointer: fine)').matches;
+const svg=m=>`<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${MOT[m]||MOT.sun}</svg>`;
+const col=b=>PAL[b.pal]||PAL[0];
+const cover=b=>{const[c,k]=col(b);return `<div class="cv" style="--c:${c};--k:${k}">${b.img?`<img src="${b.img}" alt="">`:`<div class="cv-in"><small>${esc(b.a)}</small><div class="cv-m">${svg(b.m)}</div><b class="${b.t.length>7?'s':''}">${esc(b.t)}</b><i>${esc(b.py)}</i></div>`}</div>`};
+const spine=b=>{const[c,k]=col(b);return `<div class="sp" style="--c:${c};--k:${k}"><span class="sp-m"></span><b>${esc(b.t)}</b><small>${esc(b.a)}</small>${b.file?'<i class="rb"></i>':''}</div>`};
+
+const stage=$('#stage'),ring=$('#ring'),floor=$('#floor'),main=$('#main'),detail=$('#detail'),dt=$('#dt'),dcover=$('#dcover'),curEl=$('#cur');
+let filter='all',list=[],els=[],dims=[],xs=[],n=0,pos=0,target=0,lastC=-1,dirty=true,K=1,C1=0,drag=null,wt=0,detailOpen=false,cb=null,dataChanged=false;
+
+function getList(){return books.map((b,o)=>({b,o})).filter(x=>filter==='all'||x.b.s===filter).sort((x,y)=>(x.b.ry-y.b.ry)||(x.o-y.o)).map(x=>x.b)}
+function build(keepId,sweep){
+ list=getList();n=list.length;
+ ring.innerHTML=list.map((b,i)=>`<div class="bk" data-i="${i}"><div class="box" style="--c:${col(b)[0]}"><div class="fc front">${cover(b)}</div><div class="fc spine">${spine(b)}</div><div class="fc edge"></div><div class="fc back"></div><div class="fc topf"></div></div></div>`).join('');
+ els=[...ring.children];$('#empty').hidden=n>0;
+ let ci=keepId?list.findIndex(b=>b.id===keepId):-1;if(ci<0)ci=Math.floor((n-1)/2);
+ target=Math.max(ci,0);pos=sweep&&!reduce?target-3:target;lastC=-1;
+ if(sweep&&!reduce){els.forEach((el,i)=>el.firstElementChild.style.setProperty('--dl',Math.abs(i-target)*35+'ms'));ring.classList.remove('deal');void ring.offsetWidth;ring.classList.add('deal')}
+ $('#count').textContent=`책 ${books.length}권 · 예시 책으로 시작해요`;
+ buildTl();layout();if(!n)updateInfo(-1);
+}
+function layout(){
+ const H=stage.clientHeight,W=stage.clientWidth;const base=Math.min(H*.66,340,W*.6);K=base/300;const by=H*.86;
+ dims=list.map(b=>{const h=base*(.88+(hash(b.id)%13)/100);return{w:h*.66,h,D:Math.max(22,Math.min(50,b.p/13))*K}});
+ els.forEach((el,i)=>{const d=dims[i],s=el.firstElementChild.style;s.setProperty('--w',d.w+'px');s.setProperty('--h',d.h+'px');s.setProperty('--D',d.D+'px');el.style.top=by+'px'});
+ xs=[0];for(let i=1;i<n;i++)xs[i]=xs[i-1]+(dims[i-1].D+dims[i].D)/2+3*K;
+ const avg=n?dims.reduce((a,d)=>a+d.D,0)/n:30;C1=(base*.66*1.08-avg)/2+12*K;
+ floor.style.top=by+'px';dirty=true;
+}
+const clampI=i=>Math.max(0,Math.min(n-1,i));
+const xsAt=p=>{if(!n)return 0;const f=Math.floor(p),a=clampI(f),b=clampI(f+1);return xs[a]+(xs[b]-xs[a])*(p-f)};
+function render(){
+ const xp=xsAt(pos);
+ for(let i=0;i<n;i++){
+  const el=els[i],d=i-pos,ad=Math.abs(d);
+  if(ad>14){el.style.display='none';continue}el.style.display='';
+  const t=Math.min(ad,1),sg=Math.sign(d),dm=dims[i];
+  const x=xs[i]-xp+sg*t*C1,z=-t*dm.w/2-t*40*K-Math.pow(Math.max(ad-1,0),1.45)*9*K,r=t*86,s=1+.08*(1-t);
+  el.style.transform=`translate3d(${x.toFixed(1)}px,0,${z.toFixed(1)}px) rotateY(${r.toFixed(2)}deg) scale(${s.toFixed(3)})`;
+  el.style.setProperty('--o',ad>10?Math.max(0,1-(ad-10)/3).toFixed(2):1);
+ }
+ const c=n?clampI(Math.round(pos)):-1;if(c!==lastC){lastC=c;updateInfo(c)}
+ if(n){const p=Math.max(0,Math.min(n-1,pos)),f=Math.floor(p),y=list[f].ry+(list[clampI(f+1)].ry-list[f].ry)*(p-f);dot.style.left=yPct(y)+'%'}
+}
+function updateInfo(c){
+ const b=list[c];$('#iT').textContent=b?b.t:'';$('#iS').textContent=b?`${b.a} · ${b.py}`:'';$('#iM').textContent=b?`${b.ry} — ${b.g} · ${ST[b.s]}`:'';
+ els.forEach((el,i)=>el.classList.toggle('center',i===c));
+ if(b&&!reduce)$('#info').animate([{opacity:0,transform:'translateY(6px)'},{opacity:1,transform:'none'}],{duration:380,easing:'ease-out'});
+}
+const tl=$('#tl');let dot,yMin=0,yMax=0;
+const yPct=y=>yMax===yMin?50:(y-yMin)/(yMax-yMin)*100;
+function buildTl(){
+ const ys=list.map(b=>b.ry);yMin=Math.min(...ys);yMax=Math.max(...ys);let h='';
+ if(n)for(let y=yMin;y<=yMax;y++)h+=`<button class="tk" data-y="${y}" style="left:${yPct(y)}%" aria-label="${y}년으로 이동"><span>${y}</span></button>`;
+ tl.innerHTML=h+'<i class="dot"></i>';dot=tl.querySelector('.dot');dot.hidden=!n;
+}
+tl.addEventListener('click',e=>{const t=e.target.closest('.tk');if(!t)return;const y=+t.dataset.y;let i=list.findIndex(b=>b.ry>=y);if(i>=0)target=i});
+const go=d=>{if(n)target=clampI(Math.round(target)+d)};
+$('#prev').onclick=()=>go(-1);$('#next').onclick=()=>go(1);
+
+let mx=0,my=0,cx=0,cy=0,cs=0,cOn=false;
+function tick(){
+ requestAnimationFrame(tick);
+ const df=target-pos;if(Math.abs(df)>.0005){pos+=df*(reduce?1:drag?.35:.11);dirty=true}else if(pos!==target){pos=target;dirty=true}
+ if(dirty){render();dirty=false}
+ cx+=(mx-cx)*.22;cy+=(my-cy)*.22;cs+=((cOn?1:0)-cs)*.18;
+ if(cs>.005||cOn)curEl.style.transform=`translate3d(${cx}px,${cy}px,0) scale(${cs.toFixed(3)})`;
+}
+addEventListener('pointermove',e=>{
+ mx=e.clientX;my=e.clientY;
+ const bk=e.target.closest&&e.target.closest('.bk');
+ cOn=fine&&!drag&&!detailOpen&&!!bk&&+bk.dataset.i===lastC;stage.classList.toggle('oncenter',cOn);
+ if(!cs){cx=mx;cy=my}
+});
+stage.addEventListener('pointerdown',e=>{
+ if(e.button!==0||!n)return;
+ drag={x0:e.clientX,t0:target,lx:e.clientX,lt:performance.now(),v:0,moved:false,bk:e.target.closest('.bk')};
+ stage.setPointerCapture(e.pointerId);
+});
+stage.addEventListener('pointermove',e=>{
+ if(!drag)return;const dx=e.clientX-drag.x0;if(Math.abs(dx)>6&&!drag.moved){drag.moved=true;stage.classList.add('drag');cOn=false}
+ if(!drag.moved)return;
+ const step=58*K,now=performance.now();target=Math.max(-.4,Math.min(n-.6,drag.t0-dx/step));
+ drag.v=(e.clientX-drag.lx)/step/Math.max(1,now-drag.lt)*16;drag.lx=e.clientX;drag.lt=now;
+});
+const endDrag=()=>{
+ if(!drag)return;const d=drag;drag=null;stage.classList.remove('drag');
+ if(d.moved){target=clampI(Math.round(target-d.v*3));return}
+ if(d.bk){const i=+d.bk.dataset.i;if(i===lastC)openDetail();else target=i}
+};
+stage.addEventListener('pointerup',endDrag);stage.addEventListener('pointercancel',()=>{if(drag){drag=null;target=clampI(Math.round(target));stage.classList.remove('drag')}});
+stage.addEventListener('wheel',e=>{if(!n||detailOpen)return;e.preventDefault();const d=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;target=Math.max(-.3,Math.min(n-.7,target+d*.007));clearTimeout(wt);wt=setTimeout(()=>target=clampI(Math.round(target)),140)},{passive:false});
+stage.addEventListener('keydown',e=>{if(e.key==='Enter'&&n)openDetail()});
+
+function flyTo(from,to,b,done){
+ const f=document.createElement('div');f.className='fly';
+ f.style.cssText=`left:${to.left}px;top:${to.top}px;width:${to.width}px;height:${to.height}px;--w:${to.width}px`;f.innerHTML=cover(b);document.body.appendChild(f);
+ const a=f.animate([{transform:`translate(${from.left-to.left}px,${from.top-to.top}px) scale(${from.width/to.width},${from.height/to.height})`},{transform:'none'}],{duration:reduce?1:780,easing:'cubic-bezier(.7,0,.2,1)'});
+ a.onfinish=()=>{done();f.remove()};
+}
+function openDetail(){
+ if(!n||detailOpen)return;cb=list[lastC];detailOpen=true;dataChanged=false;cOn=false;stage.classList.remove('oncenter');
+ const el=els[lastC],r1=el.querySelector('.front').getBoundingClientRect();
+ fillDetail();detail.classList.add('open','entering');detail.scrollTop=0;main.classList.add('away');
+ const dm=dims[lastC];dcover.style.aspectRatio=`${dm.w}/${dm.h}`;dcover.style.transform='';dcover.innerHTML=cover(cb);
+ dcover.style.setProperty('--w',dcover.offsetWidth+'px');const r2=dcover.getBoundingClientRect();
+ dcover.style.visibility='hidden';el.classList.add('ghost');
+ flyTo(r1,r2,cb,()=>{dcover.style.visibility='';el.classList.remove('ghost')});
+ setTimeout(()=>detail.classList.remove('entering'),1500);
+}
+function closeDetail(){
+ if(!detailOpen)return;const r1=dcover.getBoundingClientRect(),b=cb;
+ detailOpen=false;detail.classList.remove('open','entering');main.classList.remove('away');
+ if(dataChanged)build(b.id);
+ const i=list.findIndex(x=>x.id===b.id);if(i<0)return;
+ pos=target=i;lastC=-1;render();const el=els[i];el.classList.add('ghost');
+ flyTo(r1,el.querySelector('.front').getBoundingClientRect(),b,()=>el.classList.remove('ghost'));
+}
+function fillDetail(){
+ const b=cb,pc=b.p?Math.round((b.cur||0)/b.p*100):0;
+ dt.innerHTML=`<p class="lbl">${esc(b.a)} · ${esc(b.py)}년 출간</p>
+<h2 class="dtitle serif">${esc(b.t)}</h2>
+<p class="dmeta">${esc(b.g)} / ${esc(b.p)}쪽 / ${esc(b.ry)}년 서가</p>
+<input class="dline" data-f="line" value="${esc(b.line)}" placeholder="한 줄 소개" aria-label="한 줄 소개">
+<div class="fsec">${b.file?`<div class="fbox"><button class="btn solid" data-act="read">본문 읽기${b.file.page>1?` · ${b.file.page}쪽부터`:''}</button><span class="fmeta">${esc(b.file.name)} · ${fmtSize(b.file.size)}</span><span><button class="lnk" data-act="fup">바꾸기</button><button class="lnk" data-act="fdel">빼기</button></span><span class="confirm" id="cf2" hidden>본문을 뺄까요? <button data-act="fdelyes">빼기</button><button data-act="fdelno">취소</button></span></div>`:`<button class="drop" data-act="fup"><b>본문 파일 넣기</b><span>PDF · EPUB · TXT · DOCX 파일을 끌어 놓거나 눌러서 고르세요</span></button>`}</div>
+<div class="row"><span class="k">상태</span><div class="seg">${Object.entries(ST).map(([v,l])=>`<button data-act="st" data-v="${v}" aria-pressed="${b.s===v}">${l}</button>`).join('')}</div></div>
+<div class="row"><span class="k">별점</span><div class="stars">${[1,2,3,4,5].map(i=>`<button data-act="rt" data-v="${i}" class="${i<=b.r?'on':''}" aria-label="${i}점">★</button>`).join('')}</div></div>
+<div class="row prog"><span class="k">진도</span><div><input type="range" min="0" max="${esc(b.p)}" value="${b.cur||0}" data-f="cur" aria-label="읽은 쪽수"><span class="pv">${b.cur||0} / ${esc(b.p)}쪽 · ${pc}%</span></div></div>
+<div><label class="k" for="nt">메모</label><textarea id="nt" data-f="note" rows="4" placeholder="이 책에 대해 남기고 싶은 생각">${esc(b.note)}</textarea></div>
+<div><p class="k">밑줄 친 문장</p>${b.q.map((q,j)=>`<blockquote>${esc(q.t)}${q.pg?`<cite>${esc(q.pg)}쪽</cite>`:''}<button data-act="dq" data-v="${j}" aria-label="문장 삭제">×</button></blockquote>`).join('')||'<p class="emptyq">아직 저장한 문장이 없어요.</p>'}
+<form class="qadd" id="qadd"><textarea name="t" rows="2" placeholder="문장을 적어 두세요" aria-label="문장"></textarea><input name="pg" inputmode="numeric" placeholder="쪽" aria-label="쪽"><button class="btn">추가</button></form></div>
+<div class="dact"><button class="btn solid" data-act="back">서가로 돌아가기</button><button class="btn quiet" data-act="del">이 책 빼기</button><span class="confirm" id="cf" hidden>정말 뺄까요? <button data-act="delyes">빼기</button><button data-act="delno">취소</button></span></div>`;
+ [...dt.children].forEach((c,i)=>c.style.setProperty('--n',i));
+}
+const changed=()=>{dataChanged=true;save();detail.classList.remove('entering');fillDetail()};
+let st=0;const later=()=>{dataChanged=true;clearTimeout(st);st=setTimeout(save,300)};
+detail.addEventListener('click',e=>{
+ const t=e.target.closest('[data-act]');if(!t)return;const a=t.dataset.act,v=t.dataset.v,b=cb;
+ if(a==='back')closeDetail();
+ else if(a==='st'){b.s=v;if(v==='done')b.cur=b.p;changed()}
+ else if(a==='rt'){b.r=b.r===+v?0:+v;changed()}
+ else if(a==='dq'){b.q.splice(+v,1);changed()}
+ else if(a==='del')$('#cf').hidden=false;
+ else if(a==='delno')$('#cf').hidden=true;
+ else if(a==='read')openReader();
+ else if(a==='fup')fileIn.click();
+ else if(a==='fdel')$('#cf2').hidden=false;
+ else if(a==='fdelno')$('#cf2').hidden=true;
+ else if(a==='fdelyes'){idb.del(b.id);delete b.file;changed();toast('본문을 뺐어요')}
+ else if(a==='delyes'){idb.del(b.id);books=books.filter(x=>x.id!==b.id);save();detailOpen=false;detail.classList.remove('open');main.classList.remove('away');build(null,true);toast('서가에서 뺐어요')}
+});
+detail.addEventListener('input',e=>{
+ const f=e.target.dataset.f;if(!f)return;const b=cb;
+ if(f==='cur'){b.cur=+e.target.value;e.target.nextElementSibling.textContent=`${b.cur} / ${b.p}쪽 · ${b.p?Math.round(b.cur/b.p*100):0}%`}else b[f]=e.target.value;later();
+});
+detail.addEventListener('submit',e=>{e.preventDefault();const fd=new FormData(e.target),t=String(fd.get('t')).trim();if(!t)return;cb.q.push({t,pg:String(fd.get('pg')).trim()});changed()});
+const dwrap=$('#dwrap');
+dwrap.addEventListener('pointermove',e=>{if(reduce||!fine)return;const r=dwrap.getBoundingClientRect(),px=(e.clientX-r.left)/r.width-.5,py=(e.clientY-r.top)/r.height-.5;dcover.style.transform=`rotateY(${px*16}deg) rotateX(${-py*10}deg)`});
+dwrap.addEventListener('pointerleave',()=>dcover.style.transform='');
+
+const chips=$('#chips');
+chips.innerHTML=[['all','전체'],...Object.entries(ST)].map(([v,l])=>`<button data-v="${v}" aria-pressed="${v==='all'}">${l}</button>`).join('');
+function setFilter(f,keep){filter=f;chips.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===f));build(keep,true)}
+chips.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&!detailOpen)setFilter(b.dataset.v,list[lastC]?.id)});
+
+let openSheetEl=null;
+function openSheet(name){
+ if(detailOpen&&name!=='backup')closeDetail();
+ openSheetEl=$('#s-'+name);openSheetEl.classList.add('on');
+ if(name==='index'){$('#q').value='';renderIndex('');$('#q').focus()}
+ if(name==='backup'){$('#bx').value=JSON.stringify(books);$('#bi').value=''}
+ if(name==='add'){resetAdd();$('#addf').t.focus()}
+}
+function closeSheet(){if(openSheetEl){openSheetEl.classList.remove('on');openSheetEl=null;stage.focus({preventScroll:true})}}
+document.addEventListener('click',e=>{const s=e.target.closest('[data-sheet]');if(s)openSheet(s.dataset.sheet);if(e.target.closest('[data-close]')||e.target.classList.contains('sheet'))closeSheet()});
+document.addEventListener('keydown',e=>{
+ if(readerOpen){if(e.key==='Escape')closeReader();else if(e.key==='ArrowRight'){turn(1);e.preventDefault()}else if(e.key==='ArrowLeft'){turn(-1);e.preventDefault()}return}
+ if(e.key==='Escape'){if(openSheetEl)closeSheet();else closeDetail();return}
+ if(openSheetEl||detailOpen||e.target.matches('input,textarea,select'))return;
+ if(e.key==='ArrowLeft'){go(-1);e.preventDefault()}if(e.key==='ArrowRight'){go(1);e.preventDefault()}
+});
+function renderIndex(q){
+ q=q.trim().toLowerCase();const r=[...books].sort((a,b)=>b.ry-a.ry).filter(b=>!q||(b.t+b.a).toLowerCase().includes(q));
+ $('#list').innerHTML=r.map(b=>`<button class="li" data-id="${b.id}"><i style="--c:${col(b)[0]}"></i><span><b>${esc(b.t)}</b><small>${esc(b.a)} · ${esc(b.ry)}</small></span><em>${ST[b.s]}</em></button>`).join('')||'<p class="emptyq">찾는 책이 없어요.</p>';
+}
+$('#q').addEventListener('input',e=>renderIndex(e.target.value));
+$('#list').addEventListener('click',e=>{const b=e.target.closest('.li');if(!b)return;closeSheet();const id=b.dataset.id;if(!list.some(x=>x.id===id))setFilter('all',id);else target=list.findIndex(x=>x.id===id)});
+
+const addf=$('#addf');let tmpImg='';
+$('#sSel').innerHTML=Object.entries(ST).map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+$('#swPal').innerHTML=PAL.map((p,i)=>`<label><input type="radio" name="pal" value="${i}" aria-label="색 ${i+1}"><span style="background:${p[0]}"></span></label>`).join('');
+$('#swMot').innerHTML=MK.map(m=>`<label><input type="radio" name="m" value="${m}" aria-label="${m}"><span>${svg(m)}</span></label>`).join('');
+function draft(){const f=new FormData(addf);return{t:String(f.get('t')||'').trim()||'제목',a:String(f.get('a')||'').trim(),py:String(f.get('py')||'').trim(),pal:+f.get('pal')||0,m:f.get('m')||'sun',img:tmpImg}}
+const prevBox=$('#prev2');const upPrev=()=>prevBox.innerHTML=cover(draft());
+function resetAdd(){addf.reset();tmpImg='';addf.ry.value=new Date().getFullYear();addf.s.value='want';addf.pal[Math.floor(Math.random()*PAL.length)].checked=true;addf.m[Math.floor(Math.random()*MK.length)].checked=true;upPrev()}
+addf.addEventListener('input',e=>{if(e.target.name!=='img')upPrev()});
+addf.img.addEventListener('change',e=>{
+ const file=e.target.files[0];if(!file)return;const rd=new FileReader();
+ rd.onload=()=>{const im=new Image();im.onload=()=>{const s=Math.min(1,520/im.height),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);tmpImg=c.toDataURL('image/jpeg',.82);upPrev()};im.src=rd.result};rd.readAsDataURL(file);
+});
+addf.addEventListener('submit',e=>{
+ e.preventDefault();const f=new FormData(addf),d=draft(),yr=new Date().getFullYear();
+ const b={id:'b'+Date.now().toString(36),t:d.t,a:d.a||'작자 미상',py:d.py||'—',g:String(f.get('g')||'').trim()||'기타',p:Math.max(1,parseInt(f.get('p'))||300),ry:parseInt(f.get('ry'))||yr,s:f.get('s'),r:0,pal:d.pal,m:d.m,line:'',note:'',cur:0,q:[],img:tmpImg};
+ if(b.s==='done')b.cur=b.p;books.push(b);save();closeSheet();setFilter('all',b.id);toast('서가에 꽂았어요');
+});
+$('#copyb').onclick=async()=>{const t=$('#bx');try{await navigator.clipboard.writeText(t.value);toast('복사했어요')}catch(e){t.select();toast('선택해 두었어요. 직접 복사해 주세요')}};
+$('#impb').onclick=()=>{try{const v=JSON.parse($('#bi').value);if(!Array.isArray(v)||!v.every(b=>b&&b.id&&b.t))throw 0;books=v.map(b=>({q:[],note:'',line:'',img:'',...b}));save();closeSheet();setFilter('all');toast('가져왔어요')}catch(e){toast('형식이 맞지 않아요')}};
+let tt=0;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2200)}
+
+
+// ---------- 본문 읽기 ----------
+const CDN='https://cdnjs.cloudflare.com/ajax/libs/';
+const LIB={pdf:CDN+'pdf.js/3.11.174/pdf.min.js',pdfw:CDN+'pdf.js/3.11.174/pdf.worker.min.js',zip:CDN+'jszip/3.10.1/jszip.min.js'};
+const loaded={};
+const loadJS=src=>loaded[src]||(loaded[src]=new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>{delete loaded[src];rej(new Error('load'))};document.head.appendChild(s)}));
+const idb=(()=>{let p;const open=()=>p||(p=new Promise((res,rej)=>{const r=indexedDB.open('jaden-library',1);r.onupgradeneeded=()=>r.result.createObjectStore('files');r.onsuccess=()=>res(r.result);r.onerror=()=>{p=null;rej(r.error)}}));
+ const tx=(m,fn)=>open().then(db=>new Promise((res,rej)=>{const t=db.transaction('files',m),q=fn(t.objectStore('files'));t.oncomplete=()=>res(q.result);t.onerror=t.onabort=()=>rej(t.error)}));
+ return{get:k=>tx('readonly',s=>s.get(k)),put:(k,v)=>tx('readwrite',s=>s.put(v,k)),del:k=>tx('readwrite',s=>s.delete(k)).catch(()=>{})}})();
+const fmtSize=n=>n>1048576?(n/1048576).toFixed(1)+'MB':Math.max(1,Math.round(n/1024))+'KB';
+const kindOf=name=>{const e=name.toLowerCase().split('.').pop();return e==='hwp'||e==='hwpx'?'hwp':({pdf:'pdf',epub:'epub',txt:'txt',md:'txt',docx:'docx'}[e]||'')};
+const fileIn=$('#fileIn');
+fileIn.addEventListener('change',()=>{const f=fileIn.files[0];fileIn.value='';if(f)attach(f)});
+async function attach(f){
+ const k=kindOf(f.name),b=cb;if(!b)return;
+ if(k==='hwp'){toast('한글 파일은 PDF로 저장해서 올려 주세요');return}
+ if(!k){toast('PDF, EPUB, TXT, DOCX 파일을 올려 주세요');return}
+ try{await idb.put(b.id,{blob:f,name:f.name,kind:k})}catch(e){toast('이 브라우저에서는 파일을 저장할 수 없어요');return}
+ b.file={name:f.name,size:f.size,kind:k,page:1};changed();openReader();
+}
+detail.addEventListener('dragover',e=>{const d=e.target.closest('.drop');if(d){e.preventDefault();d.classList.add('over')}});
+detail.addEventListener('dragleave',e=>{const d=e.target.closest('.drop');if(d)d.classList.remove('over')});
+detail.addEventListener('drop',e=>{if(!e.target.closest('.drop'))return;e.preventDefault();const f=e.dataTransfer.files[0];if(f)attach(f)});
+addEventListener('dragover',e=>e.preventDefault());addEventListener('drop',e=>e.preventDefault());
+
+const reader=$('#reader'),spreadEl=$('#spread'),sL=$('#sL'),sR=$('#sR'),rmsg=$('#rmsg'),rRange=$('#rRange'),meas=$('#meas');
+let R=null,readerOpen=false,gen=0;const pcache=new Map();
+const dur=ms=>reduce?1:ms;
+function rLayout(){
+ const vw=innerWidth,vh=innerHeight,single=vw<760,maxH=Math.max(260,vh-(single?160:180)),maxW=single?vw-40:(vw-110)/2;
+ const H=Math.min(maxH,maxW/R.aspect,980);R.single=single;R.W=Math.round(H*R.aspect);R.H=Math.round(H);
+ spreadEl.classList.toggle('single',single);spreadEl.style.width=(single?R.W:R.W*2)+'px';spreadEl.style.height=R.H+'px';
+ reader.style.setProperty('--pw',R.W+'px');reader.style.setProperty('--ph',R.H+'px');reader.style.setProperty('--fs',Math.max(12.5,Math.min(17,R.W*.036)).toFixed(1)+'px');
+}
+const norm=p=>{const a=[];for(const s of p.split('/')){if(s==='..')a.pop();else if(s&&s!=='.')a.push(s)}return a.join('/')};
+async function parseText(kind,blob){
+ if(kind==='txt'){const buf=await blob.arrayBuffer();let t=new TextDecoder('utf-8').decode(buf);if((t.match(/\uFFFD/g)||[]).length>5){try{t=new TextDecoder('euc-kr').decode(buf)}catch(e){}}
+  return t.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map(x=>/^#{1,6}\s/.test(x)?{h:1,t:x.replace(/^#+\s*/,'')}:{t:x})}
+ await loadJS(LIB.zip);const zip=await JSZip.loadAsync(blob),X=(t,ty)=>new DOMParser().parseFromString(t,ty);
+ if(kind==='docx'){const d=X(await zip.file('word/document.xml').async('string'),'application/xml');
+  return [...d.getElementsByTagName('w:p')].map(p=>{const t=[...p.getElementsByTagName('w:t')].map(n=>n.textContent).join('').trim(),st=p.getElementsByTagName('w:pStyle')[0];return t?{t,h:st&&/heading|title|제목/i.test(st.getAttribute('w:val')||'')?1:0}:null}).filter(Boolean)}
+ const cont=X(await zip.file('META-INF/container.xml').async('string'),'application/xml'),opfPath=cont.getElementsByTagName('rootfile')[0].getAttribute('full-path'),base=opfPath.replace(/[^/]*$/,'');
+ const opf=X(await zip.file(opfPath).async('string'),'application/xml'),man={},out=[];
+ for(const it of opf.getElementsByTagName('item'))man[it.getAttribute('id')]=it.getAttribute('href');
+ for(const ref of opf.getElementsByTagName('itemref')){const h=man[ref.getAttribute('idref')];if(!h)continue;const f=zip.file(norm(decodeURIComponent(base+h.split('#')[0])));if(!f)continue;
+  const doc=X(await f.async('string'),'text/html');if(!doc.body)continue;
+  for(const el of doc.body.querySelectorAll('h1,h2,h3,h4,p,li,blockquote,pre')){if(el.querySelector('h1,h2,h3,h4,p,li,blockquote,pre'))continue;const t=el.textContent.replace(/\s+/g,' ').trim();if(t)out.push({t,h:/^H/.test(el.tagName)?1:0})}}
+ return out;
+}
+async function paginate(paras,g){
+ const el=meas,pages=[],fits=()=>el.scrollHeight<=el.clientHeight+1;let body=false,last=0;
+ el.innerHTML=`<h2 class="pt">${esc(R.b.t)}</h2><p class="pa">${esc(R.b.a)}</p>`;
+ const flush=()=>{pages.push(el.innerHTML);el.innerHTML='';body=false};
+ for(const pr of paras){
+  if(g!==gen)return null;
+  let t=pr.t,cont=false;if(pr.h&&body)flush();
+  while(t){
+   const node=document.createElement(pr.h?'h3':'p');if(cont)node.className='c';node.textContent=t;el.appendChild(node);
+   if(fits()){body=true;break}
+   let lo=0,hi=t.length;while(lo<hi){const m=Math.ceil((lo+hi)/2);node.textContent=t.slice(0,m);if(fits())lo=m;else hi=m-1}
+   const sp=t.lastIndexOf(' ',lo);if(lo<t.length&&sp>lo-24&&sp>0)lo=sp;
+   if(lo===0){if(el.childNodes.length>1){el.removeChild(node);flush();continue}lo=Math.min(t.length,120)}
+   node.textContent=t.slice(0,lo);flush();t=t.slice(lo).trimStart();cont=true;
+  }
+  if(pages.length-last>=15){last=pages.length;rmsg.textContent=`쪽을 나누는 중… ${pages.length}쪽`;await new Promise(r=>setTimeout(r))}
+ }
+ if(el.innerHTML)flush();return pages;
+}
+async function pdfOpen(blob){await loadJS(LIB.pdfw);await loadJS(LIB.pdf);const L=window.pdfjsLib;L.GlobalWorkerOptions.workerSrc=LIB.pdfw;return L.getDocument({data:new Uint8Array(await blob.arrayBuffer()),isEvalSupported:false}).promise}
+function pdfCanvas(n){
+ const key=n+'@'+R.W;if(pcache.has(key))return pcache.get(key);const W=R.W;
+ const pr=R.doc.getPage(n).then(pg=>{const v1=pg.getViewport({scale:1}),v=pg.getViewport({scale:W*Math.min(2,devicePixelRatio||1)/v1.width}),c=document.createElement('canvas');c.width=Math.ceil(v.width);c.height=Math.ceil(v.height);return pg.render({canvasContext:c.getContext('2d'),viewport:v}).promise.then(()=>c)});
+ pcache.set(key,pr);if(pcache.size>30)pcache.delete(pcache.keys().next().value);return pr;
+}
+async function makePage(n){
+ const d=document.createElement('div');d.className='pg';
+ if(n<=0){d.classList.add('inside');d.innerHTML=`<div class="exlib"><small>EX LIBRIS</small><b>JADEN</b><i>${esc(R.b.t)}</i></div>`;return d}
+ if(n>R.total){d.classList.add('inside');return d}
+ if(R.kind==='pdf'){const src=await pdfCanvas(n),c=document.createElement('canvas');c.width=src.width;c.height=src.height;c.getContext('2d').drawImage(src,0,0);d.classList.add('pdf');d.appendChild(c)}
+ else{d.classList.add('pg-t');d.innerHTML=R.pages[n-1]}
+ const f=document.createElement('span');f.className='pno';f.textContent=n;d.appendChild(f);return d;
+}
+const clampP=n=>Math.max(1,Math.min(R.total,n));
+const curPage=()=>R.single?R.p:clampP(R.s*2||1);
+const setPos=n=>{n=clampP(n);if(R.single)R.p=n;else R.s=Math.floor(n/2)};
+function prefetch(){if(R&&R.kind==='pdf'){const c=curPage();for(let i=1;i<=4;i++){if(c+i<=R.total)pdfCanvas(c+i)}if(c>1)pdfCanvas(c-1)}}
+let pt=0;
+function updBar(track){
+ const t=R.total;let ps=R.single?[R.p]:[2*R.s,2*R.s+1].filter(x=>x>=1&&x<=t);
+ $('#rP').textContent=`${ps.join('–')} / ${t}쪽`;rRange.max=t;rRange.value=curPage();
+ if(!track)return;const b=R.b,c=curPage();b.file.page=c;if(b.s!=='done')b.cur=Math.round(c/t*b.p);if(c>1&&b.s==='want')b.s='reading';
+ dataChanged=true;clearTimeout(pt);pt=setTimeout(save,400);
+}
+async function renderStatic(){
+ const g=gen;if(R.single){const r=await makePage(R.p);if(g!==gen)return;sR.replaceChildren(r)}
+ else{const[l,r]=await Promise.all([makePage(2*R.s),makePage(2*R.s+1)]);if(g!==gen)return;sL.replaceChildren(l);sR.replaceChildren(r)}
+ updBar(true);prefetch();
+}
+function leaf(side,front,back){const l=document.createElement('div');l.className='leaf '+side;const f=document.createElement('div');f.className='lf lf-f';f.appendChild(front);const k=document.createElement('div');k.className='lf lf-b';k.appendChild(back);l.append(f,k);spreadEl.appendChild(l);return l}
+const blankPg=()=>{const d=document.createElement('div');d.className='pg inside';return d};
+const EASE='cubic-bezier(.45,.05,.25,1)';
+function shade(l,a,b,ms){l.children[0].animate([{filter:`brightness(${a})`},{filter:`brightness(${b})`}],{duration:ms,easing:EASE});l.children[1].animate([{filter:`brightness(${b})`},{filter:`brightness(${a})`}],{duration:ms,easing:EASE})}
+async function turn(dir){
+ if(!R||R.busy||!R.total)return;const g=gen,ms=dur(780);
+ if(R.single){
+  const np=R.p+dir;if(np<1||np>R.total)return;R.busy=true;
+  if(dir>0){const[front,under]=await Promise.all([makePage(R.p),makePage(np)]);if(g!==gen)return;sR.replaceChildren(under);const l=leaf('r',front,blankPg());
+   await l.animate([{transform:'rotateY(0deg)',opacity:1},{transform:'rotateY(-150deg)',opacity:1,offset:.8},{transform:'rotateY(-180deg)',opacity:0}],{duration:ms,easing:EASE}).finished.catch(()=>{});l.remove()}
+  else{const front=await makePage(np);if(g!==gen)return;const l=leaf('r',front,blankPg());
+   await l.animate([{transform:'rotateY(-180deg)',opacity:0},{transform:'rotateY(-150deg)',opacity:1,offset:.2},{transform:'rotateY(0deg)',opacity:1}],{duration:ms,easing:EASE}).finished.catch(()=>{});if(g!==gen)return;sR.replaceChildren(front);l.remove()}
+  R.p=np;
+ }else{
+  const ns=R.s+dir;if(ns<0||ns>Math.floor(R.total/2))return;R.busy=true;
+  if(dir>0){const[front,back,under]=await Promise.all([makePage(2*R.s+1),makePage(2*R.s+2),makePage(2*R.s+3)]);if(g!==gen)return;sR.replaceChildren(under);const l=leaf('r',front,back);shade(l,1,.72,ms);
+   await l.animate([{transform:'rotateY(0deg)'},{transform:'rotateY(-180deg)'}],{duration:ms,easing:EASE}).finished.catch(()=>{});if(g!==gen)return;sL.replaceChildren(back);l.remove()}
+  else{const[front,back,under]=await Promise.all([makePage(2*R.s),makePage(2*R.s-1),makePage(2*R.s-2)]);if(g!==gen)return;sL.replaceChildren(under);const l=leaf('l',front,back);shade(l,1,.72,ms);
+   await l.animate([{transform:'rotateY(0deg)'},{transform:'rotateY(180deg)'}],{duration:ms,easing:EASE}).finished.catch(()=>{});if(g!==gen)return;sR.replaceChildren(back);l.remove()}
+  R.s=ns;
+ }
+ if(g!==gen)return;R.busy=false;updBar(true);prefetch();
+}
+async function openReader(){
+ const b=cb;if(!b||!b.file||readerOpen)return;
+ readerOpen=true;const g=++gen;R={b,kind:b.file.kind,aspect:.68,s:0,p:1,total:0,busy:true};
+ const from=dcover.getBoundingClientRect();
+ spreadEl.classList.remove('opened');spreadEl.style.visibility='hidden';spreadEl.style.setProperty('--bc',col(b)[0]);
+ sL.replaceChildren();sR.replaceChildren();$('#rT').textContent=b.t;$('#rA').textContent=b.a;$('#rP').textContent='';rmsg.textContent='책을 펴는 중…';
+ reader.hidden=false;rLayout();requestAnimationFrame(()=>reader.classList.add('on'));
+ try{
+  const rec=await idb.get(b.id);if(!rec)throw new Error('nofile');
+  if(R.kind==='pdf'){R.doc=await pdfOpen(rec.blob);if(g!==gen)return;R.total=R.doc.numPages;const v=(await R.doc.getPage(1)).getViewport({scale:1});R.aspect=Math.max(.4,Math.min(1.5,v.width/v.height));rLayout()}
+  else{const paras=await parseText(R.kind,rec.blob);if(g!==gen)return;if(!paras.length)throw new Error('empty');await document.fonts.ready;R.paras=paras;R.pages=await paginate(paras,g);if(!R.pages)return;R.total=R.pages.length}
+ }catch(e){if(g!==gen)return;rmsg.textContent=e.message==='load'?'읽기 도구를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.':e.message==='nofile'?'이 브라우저에 저장된 본문이 없어요. 파일을 다시 넣어 주세요.':'이 파일을 열지 못했어요. 다른 형식으로 저장해서 다시 올려 보세요.';return}
+ setPos(b.file.page||1);
+ const back=R.single?blankPg():await makePage(2*R.s),under=await makePage(R.single?R.p:2*R.s+1);if(g!==gen)return;
+ rmsg.textContent='';sR.replaceChildren(under);
+ const cov=document.createElement('div');cov.className='pg cvpg';cov.style.setProperty('--w',R.W+'px');cov.innerHTML=cover(b);
+ const l=leaf('r',cov,back),shift=R.single?0:-R.W/2;spreadEl.style.transform=`translateX(${shift}px)`;
+ const to=l.getBoundingClientRect();
+ if(from.width>0)await new Promise(res=>flyTo(from,to,b,()=>{spreadEl.style.visibility='';res()}));
+ spreadEl.style.visibility='';if(g!==gen)return;
+ spreadEl.classList.add('opened');const ms=dur(1150);
+ const a=l.animate(R.single?[{transform:'rotateY(0deg)',opacity:1},{transform:'rotateY(-150deg)',opacity:1,offset:.8},{transform:'rotateY(-180deg)',opacity:0}]:[{transform:'rotateY(0deg)'},{transform:'rotateY(-180deg)'}],{duration:ms,easing:'cubic-bezier(.55,.05,.25,1)',fill:'forwards'});
+ if(shift)spreadEl.animate([{transform:`translateX(${shift}px)`},{transform:'translateX(0)'}],{duration:ms,easing:'cubic-bezier(.55,.05,.25,1)'});
+ spreadEl.style.transform='';
+ await a.finished.catch(()=>{});if(g!==gen)return;
+ if(!R.single)sL.replaceChildren(back);l.remove();R.busy=false;updBar(false);prefetch();
+}
+function closeReader(){
+ if(!readerOpen)return;readerOpen=false;gen++;reader.classList.remove('on');
+ if(R&&R.doc)R.doc.destroy();R=null;pcache.clear();save();
+ setTimeout(()=>{if(!readerOpen){reader.hidden=true;sL.replaceChildren();sR.replaceChildren();spreadEl.querySelectorAll('.leaf').forEach(x=>x.remove())}},450);
+ if(detailOpen&&cb){detail.classList.remove('entering');fillDetail()}
+}
+$('#rX').onclick=closeReader;$('#rPrev').onclick=()=>turn(-1);$('#rNext').onclick=()=>turn(1);
+rRange.addEventListener('input',()=>{if(R)$('#rP').textContent=`${rRange.value} / ${R.total}쪽`});
+rRange.addEventListener('change',()=>{if(R&&!R.busy&&R.total){setPos(+rRange.value);renderStatic()}});
+let sw=null;
+spreadEl.addEventListener('pointerdown',e=>{sw={x:e.clientX,y:e.clientY}});
+spreadEl.addEventListener('pointerup',e=>{
+ if(!sw||!R)return;const dx=e.clientX-sw.x;sw=null;
+ if(Math.abs(dx)>50){turn(dx<0?1:-1);return}
+ const r=spreadEl.getBoundingClientRect(),x=(e.clientX-r.left)/r.width;turn(R.single?(x<.3?-1:1):(x<.5?-1:1));
+});
+let rz=0;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(async()=>{
+ if(!readerOpen||!R||!R.total||R.busy)return;const g=gen,frac=curPage()/R.total,pg=curPage();R.busy=true;rLayout();pcache.clear();
+ if(R.kind!=='pdf'){const pages=await paginate(R.paras,g);if(!pages||g!==gen)return;R.pages=pages;R.total=pages.length;setPos(Math.round(frac*R.total)||1)}else setPos(pg);
+ R.busy=false;rmsg.textContent='';renderStatic()},250)});
+
+const ro=new ResizeObserver(()=>{layout()});ro.observe(stage);
+build(null,true);requestAnimationFrame(tick);
+}
+</script>
+</body>
+</html>
