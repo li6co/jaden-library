@@ -223,6 +223,7 @@ blockquote button{position:absolute;right:0;top:0;width:36px;height:36px;border:
       <button data-sheet="index">목록</button>
       <button data-sheet="add">책 추가</button>
       <button data-sheet="backup">백업</button>
+      <button id="themeBtn" type="button">어둡게</button>
     </nav>
   </header>
   <div class="chips" id="chips" role="group" aria-label="상태로 거르기"></div>
@@ -714,6 +715,10 @@ let rz=0;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(async()=>
  if(R.kind!=='pdf'){const pages=await paginate(R.paras,g);if(!pages||g!==gen)return;R.pages=pages;R.total=pages.length;setPos(Math.round(frac*R.total)||1)}else setPos(pg);
  R.busy=false;rmsg.textContent='';renderStatic()},250)});
 
+const themeBtn=$('#themeBtn'),TKEY='jaden-library-theme';
+function setTheme(t){document.documentElement.dataset.theme=t;themeBtn.textContent=t==='dark'?'밝게':'어둡게';themeBtn.setAttribute('aria-label',t==='dark'?'밝은 화면으로 바꾸기':'어두운 화면으로 바꾸기');try{localStorage.setItem(TKEY,t)}catch(e){}}
+let th0='light';try{th0=localStorage.getItem(TKEY)||'light'}catch(e){}
+setTheme(th0);themeBtn.onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
 const ro=new ResizeObserver(()=>{layout()});ro.observe(stage);
 build(null,true);requestAnimationFrame(tick);
 }
