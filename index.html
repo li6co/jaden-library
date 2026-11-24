@@ -332,7 +332,10 @@ const SEED=[
 ['백년의 고독','가브리엘 가르시아 마르케스',1967,'소설',568,2026,'want',0,0,'moon','한 가문 일곱 세대의 마술 같은 연대기']];
 const mk=(a,i)=>({id:'s'+i,t:a[0],a:a[1],py:a[2],g:a[3],p:a[4],ry:a[5],s:a[6],r:a[7],pal:a[8],m:a[9],line:a[10],note:'',cur:a[6]==='done'?a[4]:a[6]==='reading'?Math.round(a[4]*.42):0,q:[],img:''});
 const load=()=>{try{const v=JSON.parse(localStorage.getItem(KEY));return Array.isArray(v)?v:null}catch(e){return null}};
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(books))}catch(e){}};
+const save=()=>{
+ try{localStorage.setItem(KEY,JSON.stringify(books));return true}
+ catch(e){return false}
+};
 let books=load()||SEED.map(mk);
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -564,7 +567,24 @@ async function attach(f){
  if(k==='hwp'){toast('한글 파일은 PDF로 저장해서 올려 주세요');return}
  if(!k){toast('PDF, EPUB, TXT, DOCX 파일을 올려 주세요');return}
  try{await idb.put(b.id,{blob:f,name:f.name,kind:k})}catch(e){toast('이 브라우저에서는 파일을 저장할 수 없어요');return}
- b.file={name:f.name,size:f.size,kind:k,page:1};changed();openReader();
+ const attached={name:f.name,size:f.size,kind:k,page:1};
+ b.file=attached;
+ if(detailOpen&&cb===b)changed();else save();
+ let epub=null;
+ if(k==='epub'){
+  epub=await epubPackage(f).catch(()=>null);
+  const img=epub?await epubCover(epub).catch(()=>''):'';
+  if(b.file!==attached||!books.includes(b))return;
+  if(img){
+   const old=b.img;b.img=img;
+   if(save()){
+    const front=els[list.indexOf(b)]?.querySelector('.front');
+    if(front)front.innerHTML=cover(b);
+    if(detailOpen&&cb===b)dcover.innerHTML=cover(b);
+   }else b.img=old;
+  }
+ }
+ if(detailOpen&&cb===b)openReader(epub);
 }
 detail.addEventListener('dragover',e=>{const d=e.target.closest('.drop');if(d){e.preventDefault();d.classList.add('over')}});
 detail.addEventListener('dragleave',e=>{const d=e.target.closest('.drop');if(d)d.classList.remove('over')});
@@ -581,17 +601,94 @@ function rLayout(){
  reader.style.setProperty('--pw',R.W+'px');reader.style.setProperty('--ph',R.H+'px');reader.style.setProperty('--fs',Math.max(12.5,Math.min(17,R.W*.036)).toFixed(1)+'px');
 }
 const norm=p=>{const a=[];for(const s of p.split('/')){if(s==='..')a.pop();else if(s&&s!=='.')a.push(s)}return a.join('/')};
-async function parseText(kind,blob){
+const parseMarkup=(text,type='application/xml')=>new DOMParser().parseFromString(text,type);
+const epubTags=(doc,name)=>Array.from(doc.getElementsByTagNameNS('*',name));
+async function epubPackage(blob){
+ await loadJS(LIB.zip);
+ const zip=await JSZip.loadAsync(blob);
+ const container=parseMarkup(await zip.file('META-INF/container.xml').async('string'));
+ const path=epubTags(container,'rootfile')[0].getAttribute('full-path');
+ return {zip,path,opf:parseMarkup(await zip.file(path).async('string'))};
+}
+function epubMember(base,ref){
+ if(!ref||/^(?:[a-z][a-z\d+.-]*:|\/)/i.test(ref))return '';
+ try{
+  const path=decodeURIComponent(ref.split(/[?#]/,1)[0]);
+  return path&&!path.startsWith('/')&&!path.includes('\\')
+   ?norm(base.replace(/[^/]*$/,'')+path):'';
+ }catch(e){return ''}
+}
+function readCoverMember(file,limit){
+ return new Promise((resolve,reject)=>{
+  const chunks=[];
+  let size=0;
+  const stream=file.internalStream('uint8array');
+  stream.on('data',chunk=>{
+   size+=chunk.length;
+   if(size>limit){stream.pause();reject(new Error('EPUB cover exceeds the size limit'))}
+   else chunks.push(chunk);
+  }).on('end',()=>resolve(new Blob(chunks))).on('error',reject).resume();
+ });
+}
+async function epubCover({zip,path,opf}){
+ const candidates=new Set();
+ const items=epubTags(opf,'item');
+ const guide=epubTags(opf,'reference').find(el=>el.getAttribute('type')==='cover');
+ const coverPage=epubMember(path,guide?.getAttribute('href'));
+ if(zip.file(coverPage)){
+  if(/\.(?:jpe?g|png|gif|webp|avif)$/i.test(coverPage))candidates.add(coverPage);
+  else try{
+   const page=parseMarkup(await (await readCoverMember(zip.file(coverPage),2*1024**2)).text());
+   for(const el of [...epubTags(page,'img'),...epubTags(page,'image')]){
+    const ref=el.getAttribute('src')||el.getAttribute('href')||el.getAttributeNS('http://www.w3.org/1999/xlink','href');
+    candidates.add(epubMember(coverPage,ref));
+   }
+  }catch(e){}
+ }
+ const coverId=epubTags(opf,'meta').find(el=>el.getAttribute('name')==='cover')?.getAttribute('content');
+ const imageItems=items.filter(el=>/^image\/(?:jpeg|png|gif|webp|avif)$/i.test(el.getAttribute('media-type')||''));
+ for(const item of imageItems.filter(el=>(el.getAttribute('properties')||'').split(/\s+/).includes('cover-image')))candidates.add(epubMember(path,item.getAttribute('href')));
+ for(const item of imageItems.filter(el=>coverId&&el.getAttribute('id')===coverId))candidates.add(epubMember(path,item.getAttribute('href')));
+ for(const name of candidates){
+  const file=zip.file(name);
+  if(!file)continue;
+  let url;
+  try{
+   const blob=await readCoverMember(file,10*1024**2);
+   const head=new Uint8Array(await blob.slice(0,12).arrayBuffer());
+   const ascii=String.fromCharCode(...head);
+   const mime=head[0]===255&&head[1]===216&&head[2]===255?'image/jpeg'
+    :head[0]===137&&ascii.slice(1,4)==='PNG'?'image/png'
+    :/^GIF8[79]a/.test(ascii)?'image/gif'
+    :ascii.startsWith('RIFF')&&ascii.slice(8,12)==='WEBP'?'image/webp'
+    :ascii.slice(4)==='ftypavif'?'image/avif':'';
+   if(!mime)continue;
+   url=URL.createObjectURL(blob.slice(0,blob.size,mime));
+   const image=new Image();image.src=url;await image.decode();
+   const canvas=document.createElement('canvas');
+   canvas.width=396;canvas.height=600;
+   const ctx=canvas.getContext('2d');
+   const scale=Math.min(canvas.width/image.naturalWidth,canvas.height/image.naturalHeight);
+   const w=image.naturalWidth*scale,h=image.naturalHeight*scale;
+   ctx.fillStyle='#f4f0e8';ctx.fillRect(0,0,canvas.width,canvas.height);
+   ctx.drawImage(image,(canvas.width-w)/2,(canvas.height-h)/2,w,h);
+   return canvas.toDataURL('image/jpeg',.86);
+  }catch(e){}
+  finally{if(url)URL.revokeObjectURL(url)}
+ }
+ return '';
+}
+async function parseText(kind,blob,epub){
  if(kind==='txt'){const buf=await blob.arrayBuffer();let t=new TextDecoder('utf-8').decode(buf);if((t.match(/\uFFFD/g)||[]).length>5){try{t=new TextDecoder('euc-kr').decode(buf)}catch(e){}}
   return t.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map(x=>/^#{1,6}\s/.test(x)?{h:1,t:x.replace(/^#+\s*/,'')}:{t:x})}
- await loadJS(LIB.zip);const zip=await JSZip.loadAsync(blob),X=(t,ty)=>new DOMParser().parseFromString(t,ty);
- if(kind==='docx'){const d=X(await zip.file('word/document.xml').async('string'),'application/xml');
+ if(kind==='docx'){
+  await loadJS(LIB.zip);const zip=await JSZip.loadAsync(blob);
+  const d=parseMarkup(await zip.file('word/document.xml').async('string'));
   return [...d.getElementsByTagName('w:p')].map(p=>{const t=[...p.getElementsByTagName('w:t')].map(n=>n.textContent).join('').trim(),st=p.getElementsByTagName('w:pStyle')[0];return t?{t,h:st&&/heading|title|제목/i.test(st.getAttribute('w:val')||'')?1:0}:null}).filter(Boolean)}
- const cont=X(await zip.file('META-INF/container.xml').async('string'),'application/xml'),opfPath=cont.getElementsByTagName('rootfile')[0].getAttribute('full-path'),base=opfPath.replace(/[^/]*$/,'');
- const opf=X(await zip.file(opfPath).async('string'),'application/xml'),man={},out=[];
- for(const it of opf.getElementsByTagName('item'))man[it.getAttribute('id')]=it.getAttribute('href');
- for(const ref of opf.getElementsByTagName('itemref')){const h=man[ref.getAttribute('idref')];if(!h)continue;const f=zip.file(norm(decodeURIComponent(base+h.split('#')[0])));if(!f)continue;
-  const doc=X(await f.async('string'),'text/html');if(!doc.body)continue;
+ const {zip,path,opf}=epub||await epubPackage(blob);
+ const man=new Map(epubTags(opf,'item').map(it=>[it.getAttribute('id'),it.getAttribute('href')])),out=[];
+ for(const ref of epubTags(opf,'itemref')){const f=zip.file(epubMember(path,man.get(ref.getAttribute('idref'))));if(!f)continue;
+  const doc=parseMarkup(await f.async('string'),'text/html');if(!doc.body)continue;
   for(const el of doc.body.querySelectorAll('h1,h2,h3,h4,p,li,blockquote,pre')){if(el.querySelector('h1,h2,h3,h4,p,li,blockquote,pre'))continue;const t=el.textContent.replace(/\s+/g,' ').trim();if(t)out.push({t,h:/^H/.test(el.tagName)?1:0})}}
  return out;
 }
@@ -667,7 +764,7 @@ async function turn(dir){
  }
  if(g!==gen)return;R.busy=false;updBar(true);prefetch();
 }
-async function openReader(){
+async function openReader(epub=null){
  const b=cb;if(!b||!b.file||readerOpen)return;
  readerOpen=true;const g=++gen;R={b,kind:b.file.kind,aspect:.68,s:0,p:1,total:0,busy:true};
  const from=dcover.getBoundingClientRect();
@@ -677,7 +774,7 @@ async function openReader(){
  try{
   const rec=await idb.get(b.id);if(!rec)throw new Error('nofile');
   if(R.kind==='pdf'){R.doc=await pdfOpen(rec.blob);if(g!==gen)return;R.total=R.doc.numPages;const v=(await R.doc.getPage(1)).getViewport({scale:1});R.aspect=Math.max(.4,Math.min(1.5,v.width/v.height));rLayout()}
-  else{const paras=await parseText(R.kind,rec.blob);if(g!==gen)return;if(!paras.length)throw new Error('empty');await document.fonts.ready;R.paras=paras;R.pages=await paginate(paras,g);if(!R.pages)return;R.total=R.pages.length}
+  else{const paras=await parseText(R.kind,rec.blob,epub);if(g!==gen)return;if(!paras.length)throw new Error('empty');await document.fonts.ready;R.paras=paras;R.pages=await paginate(paras,g);if(!R.pages)return;R.total=R.pages.length}
  }catch(e){if(g!==gen)return;rmsg.textContent=e.message==='load'?'읽기 도구를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.':e.message==='nofile'?'이 브라우저에 저장된 본문이 없어요. 파일을 다시 넣어 주세요.':'이 파일을 열지 못했어요. 다른 형식으로 저장해서 다시 올려 보세요.';return}
  setPos(b.file.page||1);
  const back=R.single?blankPg():await makePage(2*R.s),under=await makePage(R.single?R.p:2*R.s+1);if(g!==gen)return;
