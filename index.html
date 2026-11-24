@@ -62,6 +62,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .cv::after,.sp::after{content:'';position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;opacity:.55;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .45 0 0 0 0 .4 0 0 0 .35 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 .cv::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,rgba(0,0,0,.28) 0,rgba(255,255,255,.12) 2.5%,transparent 7%,transparent 90%,rgba(0,0,0,.14)),radial-gradient(120% 90% at 50% 40%,transparent 60%,rgba(60,40,20,.25))}
 .cv img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.stage .cv img{pointer-events:none;-webkit-user-drag:none}
 .cv-in{position:absolute;inset:.75em .7em;border:1px solid color-mix(in srgb,var(--k) 45%,transparent);display:flex;flex-direction:column;align-items:center;text-align:center;padding:.8em .6em .7em}
 .cv-in small{font:500 .4em 'Noto Sans KR',sans-serif;letter-spacing:.22em;opacity:.85}
 .cv-m{flex:1;width:74%;display:grid;place-items:center;padding:.4em 0}
@@ -345,7 +346,7 @@ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const fine=matchMedia('(pointer: fine)').matches;
 const svg=m=>`<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${MOT[m]||MOT.sun}</svg>`;
 const col=b=>PAL[b.pal]||PAL[0];
-const cover=b=>{const[c,k]=col(b);return `<div class="cv" style="--c:${c};--k:${k}">${b.img?`<img src="${b.img}" alt="">`:`<div class="cv-in"><small>${esc(b.a)}</small><div class="cv-m">${svg(b.m)}</div><b class="${b.t.length>7?'s':''}">${esc(b.t)}</b><i>${esc(b.py)}</i></div>`}</div>`};
+const cover=b=>{const[c,k]=col(b);return `<div class="cv" style="--c:${c};--k:${k}">${b.img?`<img src="${b.img}" alt="" draggable="false">`:`<div class="cv-in"><small>${esc(b.a)}</small><div class="cv-m">${svg(b.m)}</div><b class="${b.t.length>7?'s':''}">${esc(b.t)}</b><i>${esc(b.py)}</i></div>`}</div>`};
 const spine=b=>{const[c,k]=col(b);return `<div class="sp" style="--c:${c};--k:${k}"><span class="sp-m"></span><b>${esc(b.t)}</b><small>${esc(b.a)}</small>${b.file?'<i class="rb"></i>':''}</div>`};
 
 const stage=$('#stage'),ring=$('#ring'),floor=$('#floor'),main=$('#main'),detail=$('#detail'),dt=$('#dt'),dcover=$('#dcover'),curEl=$('#cur');
