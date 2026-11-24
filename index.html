@@ -15,7 +15,7 @@
    LAYOUT: header, filter row, shelf stage, centered title with arrows, year timeline, footer */
 :root{color-scheme:light dark;
 --bg:light-dark(#FCFBF9,#15171C);--ink:light-dark(#1A1A1A,#ECE6DA);--mute:light-dark(#6B675F,#9C978D);
---ghost:light-dark(#E6E4E0,#23262D);--acc:light-dark(#2436B0,#8E9CFF);--line:light-dark(#DEDAD2,#30333A);
+--acc:light-dark(#2436B0,#8E9CFF);--line:light-dark(#DEDAD2,#30333A);
 --card:light-dark(#FFFFFF,#1C1F25);--onacc:light-dark(#fff,#10121A)}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
@@ -40,7 +40,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 .stage{position:relative;flex:1;min-height:360px;perspective:1500px;perspective-origin:50% 42%;overflow:hidden;cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none}
 .stage:focus-visible{outline:1px dashed var(--acc);outline-offset:-10px}
 .stage.drag{cursor:grabbing}.stage.oncenter{cursor:none}
-.giant{position:absolute;top:46%;transform:translateY(-50%);white-space:nowrap;writing-mode:vertical-rl;text-orientation:upright;font:900 clamp(64px,11vw,176px)/1 'Noto Serif KR',serif;color:var(--ghost);letter-spacing:-.04em;pointer-events:none}
+.giant{position:absolute;top:46%;transform:translateY(-50%);white-space:nowrap;writing-mode:vertical-rl;text-orientation:upright;font:900 clamp(64px,11vw,176px)/1 'Noto Serif KR',serif;color:var(--acc);letter-spacing:-.04em;pointer-events:none}
 .giant.l{left:3.5vw}.giant.r{right:3.5vw}
 .floor{position:absolute;left:8%;right:8%;height:56px;margin-top:-22px;background:radial-gradient(closest-side,rgba(0,0,0,.2),transparent);pointer-events:none}
 .ring{position:absolute;inset:0;transform-style:preserve-3d}
