@@ -220,7 +220,7 @@ blockquote button{position:absolute;right:0;top:0;width:36px;height:36px;border:
 <body>
 <div class="app">
   <header class="top">
-    <div class="brand">JADEN <i></i> 개인 서재</div>
+    <div class="brand">JADEN <i></i> personal archive</div>
     <nav class="nav" aria-label="메뉴">
       <button data-sheet="index">목록</button>
       <button data-sheet="add">책 추가</button>
@@ -360,7 +360,7 @@ function build(keepId,sweep){
  let ci=keepId?list.findIndex(b=>b.id===keepId):-1;if(ci<0)ci=Math.floor((n-1)/2);
  target=Math.max(ci,0);pos=sweep&&!reduce?Math.max(0,target-3):target;lastC=-1;lastInfo=-1;
  if(sweep&&!reduce){els.forEach((el,i)=>el.firstElementChild.style.setProperty('--dl',Math.abs(i-target)*35+'ms'));ring.classList.remove('deal');void ring.offsetWidth;ring.classList.add('deal')}
- $('#count').textContent=`책 ${books.length}권 · 예시 책으로 시작해요`;
+ $('#count').textContent=`책 ${books.length}권`;
  buildTl();layout();if(!n)updateInfo(-1);
 }
 function layout(){
