@@ -78,9 +78,12 @@ button{font:inherit;color:inherit;cursor:pointer}
 .empty{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:14px;text-align:center}
 .empty p{font:700 22px 'Noto Serif KR',serif;color:var(--acc);margin:0}
 .info{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;gap:12px;max-width:680px;width:100%;margin:-6px auto 0;padding:0 16px;text-align:center}
+.info-content,.info-metrics{display:grid;align-items:center}
+.info-content>*,.info-metrics>*{grid-area:1/1}
+.info-metrics{visibility:hidden;pointer-events:none}
 .arr{width:44px;height:44px;border-radius:50%;border:0;background:none;color:var(--acc);font-size:22px;line-height:1}
 .arr:hover{background:color-mix(in srgb,var(--acc) 10%,transparent)}
-.info h1{margin:0;font-weight:700;font-size:clamp(30px,4.2vw,48px);line-height:1.05;color:var(--acc);text-wrap:balance;word-break:keep-all}
+.info-title{margin:0;font-weight:700;font-size:clamp(30px,4.2vw,48px);line-height:1.05;color:var(--acc);text-wrap:balance;word-break:keep-all}
 .info .sub{margin:8px 0 0;font-size:12px;letter-spacing:.2em;color:var(--mute)}
 .info .meta{margin:10px auto 0;font-size:13px;letter-spacing:.12em;display:inline-block;border-top:1px solid var(--line);padding-top:8px}
 .tl{position:relative;height:56px;margin:18px max(4vw,16px) 8px}
@@ -239,7 +242,10 @@ blockquote button{position:absolute;right:0;top:0;width:36px;height:36px;border:
     </div>
     <div class="info">
       <button class="arr" id="prev" aria-label="이전 책">←</button>
-      <div id="info" aria-live="polite"><h1 class="serif" id="iT"></h1><p class="sub" id="iS"></p><p class="meta" id="iM"></p></div>
+      <div class="info-content">
+        <div class="info-metrics" id="info-metrics" aria-hidden="true"></div>
+        <div id="info" aria-live="polite"><h1 class="info-title serif" id="iT"></h1><p class="sub" id="iS"></p><p class="meta" id="iM"></p></div>
+      </div>
       <button class="arr" id="next" aria-label="다음 책">→</button>
     </div>
     <div class="tl" id="tl"></div>
@@ -350,11 +356,18 @@ const cover=b=>{const[c,k]=col(b);return `<div class="cv" style="--c:${c};--k:${
 const spine=b=>{const[c,k]=col(b);return `<div class="sp" style="--c:${c};--k:${k}"><span class="sp-m"></span><b>${esc(b.t)}</b><small>${esc(b.a)}</small>${b.file?'<i class="rb"></i>':''}</div>`};
 
 const stage=$('#stage'),ring=$('#ring'),floor=$('#floor'),main=$('#main'),detail=$('#detail'),dt=$('#dt'),dcover=$('#dcover'),curEl=$('#cur');
-let filter='all',list=[],els=[],dims=[],xs=[],n=0,pos=0,target=0,lastC=-1,lastInfo=-1,dirty=true,K=1,C1=0,drag=null,wt=0,detailOpen=false,cb=null,dataChanged=false;
+let filter='all',list=[],els=[],dims=[],xs=[],n=0,pos=0,target=0,lastC=-1,lastInfo=-1,dirty=true,K=1,C1=0,drag=null,wheelTimer=null,detailOpen=false,cb=null,dataChanged=false;
+const infoText=b=>b?[b.t,`${b.a} · ${b.py}`,`${b.ry} — ${b.g} · ${ST[b.s]}`]:['','',''];
 
 function getList(){return books.map((b,o)=>({b,o})).filter(x=>filter==='all'||x.b.s===filter).sort((x,y)=>(x.b.ry-y.b.ry)||(x.o-y.o)).map(x=>x.b)}
 function build(keepId,sweep){
+ stopWheel();
  list=getList();n=list.length;
+ // Reserve the same information height for every selection at the current width.
+ $('#info-metrics').innerHTML=list.map(b=>{
+  const [title,byline,meta]=infoText(b);
+  return `<div><p class="info-title serif">${esc(title)}</p><p class="sub">${esc(byline)}</p><p class="meta">${esc(meta)}</p></div>`;
+ }).join('');
  ring.innerHTML=list.map((b,i)=>`<div class="bk" data-i="${i}"><div class="box" style="--c:${col(b)[0]}"><div class="fc front">${cover(b)}</div><div class="fc spine">${spine(b)}</div><div class="fc edge"></div><div class="fc back"></div><div class="fc topf"></div></div></div>`).join('');
  els=[...ring.children];$('#empty').hidden=n>0;
  let ci=keepId?list.findIndex(b=>b.id===keepId):-1;if(ci<0)ci=Math.floor((n-1)/2);
@@ -385,8 +398,8 @@ function render(){
   if(el.hidden!==hidden)el.hidden=hidden;
   if(hidden)continue;
   const t=Math.min(ad,1),sg=Math.sign(d),dm=dims[i];
-  const x=xs[i]-xp+sg*t*C1,z=-t*dm.w/2-t*40*K-Math.pow(Math.max(ad-1,0),1.45)*9*K,r=t*86,s=1+.08*(1-t);
-  el.style.transform=`translate3d(${x}px,0,${z}px) rotateY(${r}deg) scale(${s})`;
+  const x=xs[i]-xp+sg*t*C1,z=-t*dm.w/2-t*40*K-Math.pow(Math.max(ad-1,0),1.45)*9*K,r=t*86;
+  el.style.transform=`translate3d(${x}px,0,${z}px) rotateY(${r}deg)`;
   const opacity=ad>10?(1-(ad-10)/3).toFixed(2):'1';
   if(el.style.getPropertyValue('--o')!==opacity)el.style.setProperty('--o',opacity);
  }
@@ -394,8 +407,7 @@ function render(){
  if(c!==lastC){
   els[lastC]?.classList.remove('center');els[c]?.classList.add('center');lastC=c;
  }
- // Keep the title from resizing the stage while the books are moving.
- if(c!==lastInfo&&(lastInfo<0||(!drag?.moved&&pos===target)))updateInfo(c);
+ if(c!==lastInfo&&(lastInfo<0||(!drag?.moved&&wheelTimer===null&&pos===target)))updateInfo(c);
  if(n){
   const p=clampI(pos),f=Math.floor(p),y=list[f].ry+(list[clampI(f+1)].ry-list[f].ry)*(p-f);
   dot.style.transform=`translate3d(${timelineWidth*yPct(y)/100}px,0,0)`;
@@ -403,7 +415,8 @@ function render(){
 }
 function updateInfo(c){
  lastInfo=c;
- const b=list[c];$('#iT').textContent=b?b.t:'';$('#iS').textContent=b?`${b.a} · ${b.py}`:'';$('#iM').textContent=b?`${b.ry} — ${b.g} · ${ST[b.s]}`:'';
+ const b=list[c],[title,byline,meta]=infoText(b);
+ $('#iT').textContent=title;$('#iS').textContent=byline;$('#iM').textContent=meta;
  if(b&&!reduce){
   infoFade?.cancel();
   infoFade=$('#info').animate([{opacity:.65,transform:'translateY(3px)'},{opacity:1,transform:'none'}],{duration:220,easing:'ease-out'});
@@ -416,8 +429,9 @@ function buildTl(){
  if(n)for(let y=yMin;y<=yMax;y++)h+=`<button class="tk" data-y="${y}" style="left:${yPct(y)}%" aria-label="${y}년으로 이동"><span>${y}</span></button>`;
  tl.innerHTML=h+'<i class="dot"></i>';dot=tl.querySelector('.dot');dot.hidden=!n;
 }
-tl.addEventListener('click',e=>{const t=e.target.closest('.tk');if(!t)return;const y=+t.dataset.y;let i=list.findIndex(b=>b.ry>=y);if(i>=0)target=i});
-const go=d=>{if(n)target=clampI(Math.round(target)+d)};
+function stopWheel(){clearTimeout(wheelTimer);wheelTimer=null}
+tl.addEventListener('click',e=>{const t=e.target.closest('.tk');if(!t)return;const y=+t.dataset.y;let i=list.findIndex(b=>b.ry>=y);if(i>=0){stopWheel();target=i}});
+const go=d=>{if(n){stopWheel();target=clampI(Math.round(target)+d);dirty=true}};
 $('#prev').onclick=()=>go(-1);$('#next').onclick=()=>go(1);
 
 let mx=0,my=0,cx=0,cy=0,cs=0,cOn=false,lastFrame=0;
@@ -457,7 +471,7 @@ function releaseShelf(position,speed,age){
 }
 stage.addEventListener('pointerdown',e=>{
  if(e.button!==0||!e.isPrimary||!n||drag)return;
- clearTimeout(wt);target=pos;
+ stopWheel();target=pos;
  drag={id:e.pointerId,x0:e.clientX,start:pos,x:e.clientX,time:e.timeStamp,speed:0,moved:false,bk:e.target.closest('.bk')};
  stage.setPointerCapture(e.pointerId);
 });
@@ -484,7 +498,19 @@ function endDrag(e,cancelled=false){
 stage.addEventListener('pointerup',e=>endDrag(e));
 stage.addEventListener('pointercancel',e=>endDrag(e,true));
 stage.addEventListener('lostpointercapture',e=>endDrag(e,true));
-stage.addEventListener('wheel',e=>{if(!n||detailOpen||drag)return;e.preventDefault();const d=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;target=softShelfEdge(target+d*.007);clearTimeout(wt);wt=setTimeout(()=>target=clampI(Math.round(target)),140)},{passive:false});
+stage.addEventListener('wheel',e=>{
+ if(!n||detailOpen||drag||e.ctrlKey||e.metaKey)return;
+ e.preventDefault();
+ const delta=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;
+ const unit=e.deltaMode===1?16:e.deltaMode===2?stage.clientHeight:1;
+ const step=Math.max(-1.25,Math.min(1.25,delta*unit*.007));
+ if(!Number.isFinite(step)||!step)return;
+ const origin=(target-pos)*step<0?pos:target;
+ const limited=Math.max(pos-3,Math.min(pos+3,origin+step));
+ target=clampI(limited);
+ stopWheel();
+ wheelTimer=setTimeout(()=>{wheelTimer=null;target=clampI(Math.round(target));dirty=true},150);
+},{passive:false});
 stage.addEventListener('keydown',e=>{if(e.key==='Enter'&&n)openDetail()});
 
 function flyTo(from,to,b,done){
@@ -494,7 +520,7 @@ function flyTo(from,to,b,done){
  a.onfinish=()=>{done();f.remove()};
 }
 function openDetail(){
- if(!n||detailOpen)return;cb=list[lastC];detailOpen=true;dataChanged=false;cOn=false;stage.classList.remove('oncenter');
+ if(!n||detailOpen||lastC<0)return;stopWheel();target=lastC;cb=list[lastC];detailOpen=true;dataChanged=false;cOn=false;stage.classList.remove('oncenter');
  const el=els[lastC],r1=el.querySelector('.front').getBoundingClientRect();
  fillDetail();detail.classList.add('open','entering');detail.scrollTop=0;main.classList.add('away');
  const dm=dims[lastC];dcover.style.aspectRatio=`${dm.w}/${dm.h}`;dcover.style.transform='';dcover.innerHTML=cover(cb);
@@ -579,7 +605,7 @@ function renderIndex(q){
  $('#list').innerHTML=r.map(b=>`<button class="li" data-id="${b.id}"><i style="--c:${col(b)[0]}"></i><span><b>${esc(b.t)}</b><small>${esc(b.a)} · ${esc(b.ry)}</small></span><em>${ST[b.s]}</em></button>`).join('')||'<p class="emptyq">찾는 책이 없어요.</p>';
 }
 $('#q').addEventListener('input',e=>renderIndex(e.target.value));
-$('#list').addEventListener('click',e=>{const b=e.target.closest('.li');if(!b)return;closeSheet();const id=b.dataset.id;if(!list.some(x=>x.id===id))setFilter('all',id);else target=list.findIndex(x=>x.id===id)});
+$('#list').addEventListener('click',e=>{const b=e.target.closest('.li');if(!b)return;closeSheet();stopWheel();const id=b.dataset.id;if(!list.some(x=>x.id===id))setFilter('all',id);else{target=list.findIndex(x=>x.id===id);dirty=true}});
 
 const addf=$('#addf');let tmpImg='';
 $('#sSel').innerHTML=Object.entries(ST).map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
